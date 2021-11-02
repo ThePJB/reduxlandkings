@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use crate::level::*;
 use crate::renderer::*;
 use crate::rect::*;
+use crate::entity::*;
+use crate::collision_system::*;
 
 #[derive(Debug)]
 pub enum InputCommand {
@@ -31,6 +33,7 @@ pub struct Game {
     level: Level,
     look: Vec2,
     player_id: u32,
+    collisions: Vec<CollisionEvent>,
 
 }
 
@@ -55,10 +58,19 @@ impl Game {
                 inverse_view: view.inverse(),
             },
             player_id: 0,
+            collisions: Vec::new(),
         }
     }
 
-    pub fn update(&mut self, aspect_ratio: f32, dt: f64) {
+    pub fn update(&mut self, aspect_ratio: f32, dt: f32) {
+        self.collisions.clear();
+
+        collide_entity_entity(&self.level.entities, &mut self.collisions, dt);
+        collide_entity_terrain(&self.level.entities, &self.level.tiles, self.level.grid_size, 
+            self.level.side_length as i32, &mut self.collisions, dt);
+
+        apply_movement(&mut self.level.entities, &self.collisions, dt);
+
         for (_, entity) in self.level.entities.iter_mut() {
             entity.aabb.x += entity.velocity.x * dt as f32;
             entity.aabb.y += entity.velocity.y * dt as f32;
@@ -116,7 +128,10 @@ impl Game {
 
             renderer.draw_rect(
                 ent_rect,
-                Vec3::new(1.0, 1.0, 1.0),
+                match ent.kind {
+                    EntityKind::Player => Vec3::new(1.0, 1.0, 1.0),
+                    EntityKind::WalkerShooter => Vec3::new(1.0, 0.0, 0.0),
+                },
                 0.5,
             );
         }

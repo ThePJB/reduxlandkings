@@ -1,53 +1,9 @@
-goal of this? I reckon make a SDL style renderer and reimplement rustlandkings
-
-* geometry sent from cpu - done
-* render draw rect
-* render present
-
-(oh or camera or inputs)
-
-yeah do rustlandkings itll be easier, figure out inputs
-
---------
-
-OKOKOKOK whats the matter.
-no colours. why?
-
-only draws first triangle, why?
-buffers look correct to me
-
-drawing wrong
-alignment wrong?
+# Reduxlandkings
+Top down shooter roguelike (nuclear throne inspired)
+using SDL style renderer built on OpenGL (no C dependencies yay!!!!!)
 
 
-======
-
-ok lets do rustlandkings mk2
-
-ECS
- - generational index? for fast rendering we want a nice contiguous array
-
-ColourMesh component:
- - draw all entities with 1 draw call
- * I suppose more normal/OO would be a mesh object
-   * transform per object, draw call per object?
-
-AABB component:
- - for collision
-
-PlayerController component:
- - duh
-
-AIController component:
- - duh
-
- honestly maybe sdl style rendering not so stupid
-
- I will have renderer,
- I will have ECS with hashmaps
-
-================
-
+# Architecture
 App: Renderer, input schemas, etc
 
     v input commands v rendering v
@@ -60,25 +16,55 @@ Level: entities and simulation stuff, no specific player
     
     ^ entity commands for AI
 
-=====================
 
-TODO:
- - Fix resolution
- - Entities
- - Collision
+# TODO
+ - Collision system
  - Shooting
  - Minimap
  
- - add entities, hook up player
- - sort out aspect ratio
 
- How im gonna do view matrix?
-basically just translate to position of player + 0.2 * look
-make sure its not some weird recursive shit with picking
-easier w/o mats?
 
+
+# Misc ideas
 
 level gen - multiple levels, have some big boys that seldom change direction and then spawn a bunch of other ones
 
-
 gameplay -- could make clear time be a factor
+
+could have dark levels, visibility cone, scary shit
+progress levels by finding exits, so you kind of opt into sewers or whatever its your own fault. like labyrinth in poe
+have tresury rooms etc
+
+## Enemies
+ - A fatty that spawns little guys
+    - could spawn up to a limit or be static or roam the world, get a ramp up in difficulty, encourage swiftness
+ - fast melee guys
+ - unpredictable spray and pray shooter
+ - fat tanky guy
+ - retalliator is pretty good
+ - squad tactics
+ - uses cover
+ - has shield friends that tank
+ - sprinter, gets puffed
+ - explodes on death (but friendly fire?)
+ - suicide guys
+
+## Walkers
+ - 3x3
+ - spawns exit
+ - short erratic diggy
+ - spawns short erratic diggy
+ - long distance, spawns cluster
+
+
+## Mechanics
+ - different guns should come and go, make you adapt and change it up
+ - eating guns for health
+ - eating guns for $$$
+
+# Misc issues
+
+theres the odd visual artifact
+eg a black tear
+or entities kinda warp, maybe needs some interpolation
+the autocomplete in this project is actually fucked, I wonder if its glams fault

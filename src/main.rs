@@ -3,6 +3,7 @@ mod game;
 mod rect;
 mod entity;
 mod level;
+mod collision_system;
 
 use glow::*;
 use std::error::Error;
@@ -121,7 +122,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                             game.apply_command(InputCommand::Move(Vec2::new(0.0, 0.0)));
                         }
 
-                        game.update(window_x / window_y, dt);
+                        game.update(window_x / window_y, dt as f32);
 
                         // draw
                         gl.clear(glow::COLOR_BUFFER_BIT);

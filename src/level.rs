@@ -91,11 +91,14 @@ impl Level {
         let player_pos_x = player_walker.pos.0 as f32 * level.grid_size + level.grid_size as f32/2.0;
         let player_pos_y = player_walker.pos.1 as f32 * level.grid_size + level.grid_size as f32/2.0;
 
-        level.entities.insert(0, Entity {
-            kind: EntityKind::Player, 
-            aabb: Rect::new(player_pos_x, player_pos_y, 0.05, 0.05),
-            velocity: Vec2::new(0.0, 0.0),
-        });
+        level.entities.insert(0, Entity::new(EntityKind::Player, Vec2::new(player_pos_x, player_pos_y)));
+        
+        for (i, w) in walkers.iter().enumerate() {
+            if i == player_walker_i {continue};
+            let walker_pos_x = w.pos.0 as f32 * level.grid_size + level.grid_size as f32/2.0;
+            let walker_pos_y = w.pos.1 as f32 * level.grid_size + level.grid_size as f32/2.0;
+            level.entities.insert(rand::thread_rng().gen(), Entity::new(EntityKind::WalkerShooter, Vec2::new(walker_pos_x, walker_pos_y)));
+        }
 
         level
     }
