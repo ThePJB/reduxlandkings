@@ -69,7 +69,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             gl.use_program(Some(program));
         }
 
-        gl.clear_color(0.1, 0.2, 0.3, 1.0);
+        gl.clear_color(0.0, 0.0, 0.0, 1.0);
 
         let mut game = Game::new(window_x / window_y);
 
@@ -140,7 +140,6 @@ fn main() -> Result<(), Box<dyn Error>> {
                         
                         window.swap_buffers().unwrap();
 
-                        //window.window().request_redraw();
 
                         let loop_end = SystemTime::now();
                         let delta = loop_end.duration_since(loop_start).unwrap().as_secs_f64();
@@ -165,6 +164,8 @@ fn main() -> Result<(), Box<dyn Error>> {
                             window.resize(*physical_size);
                             window_x = physical_size.width as f32;
                             window_y = physical_size.height as f32;
+                            gl.viewport(0, 0, physical_size.width as i32, physical_size.height as i32);
+
                         }
                         WindowEvent::CloseRequested => {
                             gl.delete_program(program);

@@ -79,3 +79,6 @@ easier w/o mats?
 
 
 level gen - multiple levels, have some big boys that seldom change direction and then spawn a bunch of other ones
+
+
+gameplay -- could make clear time be a factor
