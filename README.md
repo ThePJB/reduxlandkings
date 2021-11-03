@@ -22,6 +22,35 @@ Level: entities and simulation stuff, no specific player
  - Shooting
  - Minimap
  
+## Guns
+OK so what is a gun?
+ * gets updated every frame 
+ * either is told to shoot or it isnt 
+ * either shoots or it doesnt
+   * edge cases: burst fire where it shoots a minimum number of rounds
+
+ * State kept to decide whether to shoot
+   * when last shot
+   * how much ammo
+   * other previous information about shooting (how many of burst etc it can get complicated)
+   * heat or something if its ammoless
+
+ * other parameters
+
+ * can you have it be a linear combination so you can have a gun combining system? / procedural guns
+   * beneficial characteristics: damage, multishot, bullet velocity, bouncing, AoE, lightning arcs
+   * negative characteristics: cooldown, burst cooldown, ammo use, forced firing, chance to jam, spread, recoil, screen shake, overheat, reload procedure, charge up
+   * ammo types for more variety as well?
+
+ * maybe rust type system can make this pretty easy e.g. just have a bunch of maybe components
+ 
+ * dude crafting and combining guns would be really fun, kinda PoEy which is always good
+ * why not do PoE multiverse stuff too
+
+you should be a 3 legged robot and game be full of robot jokes
+what was that idea I had before about all your guns use a stack, sure that might be fun as well
+
+procedural stuff that actually has gameplay implications is a good doctrine
 
 
 
@@ -34,6 +63,13 @@ gameplay -- could make clear time be a factor
 could have dark levels, visibility cone, scary shit
 progress levels by finding exits, so you kind of opt into sewers or whatever its your own fault. like labyrinth in poe
 have tresury rooms etc
+
+## Gun ideas
+ - pistol, boring
+ - rifle, cool
+ - spray and pray smg
+
+
 
 ## Enemies
  - A fatty that spawns little guys
@@ -48,6 +84,8 @@ have tresury rooms etc
  - sprinter, gets puffed
  - explodes on death (but friendly fire?)
  - suicide guys
+ - lazy dudes that dont follow you
+ - bullet dodgers
 
 ## Walkers
  - 3x3
@@ -63,8 +101,7 @@ have tresury rooms etc
  - eating guns for $$$
 
 # Misc issues
-
-theres the odd visual artifact
-eg a black tear
-or entities kinda warp, maybe needs some interpolation
-the autocomplete in this project is actually fucked, I wonder if its glams fault
+(Bad) Cooked jittering on collide: why?
+(Medium) Why autocomplete etc jank in this project, is it glams fault?
+(Minor) black tear artifact
+(Minor) collision system hitch on walls in -X and -Y direction

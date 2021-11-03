@@ -71,10 +71,13 @@ impl Game {
 
         apply_movement(&mut self.level.entities, &self.collisions, dt);
 
+        // this shouldnt have been here but also why does it fix screen shaking lol
+        /*
         for (_, entity) in self.level.entities.iter_mut() {
             entity.aabb.x += entity.velocity.x * dt as f32;
             entity.aabb.y += entity.velocity.y * dt as f32;
         }
+        */
 
         // move camera
         if let Some(player) = self.level.entities.get(&self.player_id) {

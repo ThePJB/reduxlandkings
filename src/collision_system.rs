@@ -15,7 +15,34 @@ pub struct CollisionEvent {
     pub subject: u32,
     pub object: CollisionObject,
     pub penetration: Vec2,
-    pub subject_rect: Rect, // with bound factored in, but what if we filter things
+}
+
+// 5 cases: both a in b, both b in a, a left in b, b left in a, no overlap
+fn overlap_amount(a1: f32, a2: f32, b1: f32, b2: f32) -> f32 {
+    let a1_in_b = a1 >= b1 && a1 <= b2;
+    let a2_in_b = a2 >= b1 && a2 <= b2;
+    let b1_in_a = b1 >= a1 && b1 <= a2;
+    let b2_in_a = b2 >= a1 && b2 <= a2;
+
+    if !a1_in_b && !a2_in_b && !b1_in_a && !b2_in_a {return 0.0;} // no overlap
+    if a1_in_b && a2_in_b {return a2 - a1;} // a fully within b // maybe better to do distance to outside still
+    if b1_in_a && b2_in_a {return b2 - b1;} // b fully within a
+    if a1_in_b {return b2 - a1;} // a to right of b
+    if b1_in_a {return -(a2 - b1);} // b to right of a
+    panic!("unreachable overlap");
+}
+
+// if theres a collision return axis and amount of least penetration
+fn collide_rects(a: Rect, b: Rect) -> Option<Vec2> {
+    let x_overlap = overlap_amount(a.left(), a.right(), b.left(), b.right());
+    let y_overlap = overlap_amount(a.top(), a.bot(), b.top(), b.bot());
+
+    if x_overlap == 0.0 || y_overlap == 0.0 {return None};
+
+    if x_overlap.abs() < y_overlap.abs() {
+        return Some(Vec2::new(x_overlap, 0.0));
+    } 
+    return Some(Vec2::new(0.0, y_overlap));
 }
 
 pub fn collide_entity_terrain(
@@ -42,16 +69,13 @@ pub fn collide_entity_terrain(
                 if let Some(tile) = terrain.get((tx * terrain_side_length + ty) as usize) {
                     if *tile == Tile::Wall {
                         let tile_rect = Rect::new(tx as f32 * terrain_grid_size, ty as f32 * terrain_grid_size, terrain_grid_size, terrain_grid_size);
-                        if rect_intersection(subject_rect_desired, tile_rect) {
 
-                            // depends sign of penetration
-                            let penetration = least_penetration(subject_rect_desired, tile_rect);
+                        if let Some(penetration) = collide_rects(subject_rect_desired, tile_rect) {
 
                             collisions.push(CollisionEvent {
                                 subject: *subject_key,
                                 object: CollisionObject::Terrain(tx, ty),
                                 penetration,
-                                subject_rect: subject_rect_desired.translate(penetration),
                             })
                         }
                     }
@@ -73,53 +97,37 @@ pub fn collide_entity_entity(
         for (object_key, object) in entities {
             if subject_key == object_key {continue};
             
-            let object_rect_desired = object.aabb.translate(object.velocity * dt);
-
-            if rect_intersection(subject_rect_desired, object_rect_desired) {
-                let penetration = least_penetration(subject_rect_desired, object_rect_desired);
-
-                // so the final rects are desired - penetration * velocity split:
-                // equal velocity: 50/50
-                // all one: 100%/0
-                // a/(a+b)
-                // nah its not that easy because they could have different starting distance
-                // just calculate a shit bound, it probably won't matter
-
-                // again maybe its -penetration on the translate
+            if let Some(penetration) = collide_rects(subject_rect_desired, object.aabb) {
 
                 collisions.push(CollisionEvent {
                     subject: *subject_key,
                     object: CollisionObject::Entity(*object_key),
                     penetration,
-                    subject_rect: subject_rect_desired.translate(penetration),
                 })
             }
         }
     }
 }
 
-// then see how we go doing movement bounds
-// maybe storing pen  vec instead of other shit is fine
-
 fn movement_bounds(subject_key: u32, collisions: &Vec<CollisionEvent>) -> (f32, f32, f32, f32) {
     let max_dx = collisions.iter().filter(|col| col.subject == subject_key)
         .filter(|col| col.penetration.x < 0.0)
-        .map(|col| col.subject_rect.left())
+        .map(|col| col.penetration.x)
         .fold(f32::INFINITY, |a, b| a.min(b));  // feel like this should be max
 
     let max_dy = collisions.iter().filter(|col| col.subject == subject_key)
-        .filter(|col| col.penetration.y > 0.0)  // hopefully coordinate system not cooked
-        .map(|col| col.subject_rect.top())
+        .filter(|col| col.penetration.y < 0.0)  // hopefully coordinate system not cooked
+        .map(|col| col.penetration.y)
         .fold(f32::INFINITY, |a, b| a.min(b));
         
     let min_dx = collisions.iter().filter(|col| col.subject == subject_key)
         .filter(|col| col.penetration.x > 0.0)
-        .map(|col| col.subject_rect.right())
+        .map(|col| col.penetration.x)
         .fold(-f32::INFINITY, |a, b| a.max(b));
 
     let min_dy = collisions.iter().filter(|col| col.subject == subject_key)
-        .filter(|col| col.penetration.y < 0.0)
-        .map(|col| col.subject_rect.bot())
+        .filter(|col| col.penetration.y > 0.0)
+        .map(|col| col.penetration.y)
         .fold(-f32::INFINITY, |a, b| a.max(b));
 
     return (min_dx, max_dx, min_dy, max_dy);
@@ -144,8 +152,33 @@ pub fn apply_movement(entities: &mut HashMap<u32, Entity>, collisions: &Vec<Coll
     }
 }
 
-// todo test a bit
-// deffo some mistakos
+#[test]
+fn test_collide_rects() {
+    {
+        let r1 = Rect::new(0.0, 0.0, 1.0, 1.0);
+        let r2 = Rect::new(0.9, 0.0, 1.0, 1.0);
+        println!("rect intersection: {:?}", collide_rects(r1, r2));
+    }
+    {
+        let r1 = Rect::new(0.0, 0.0, 1.0, 1.0);
+        let r2 = Rect::new(0.9, 0.1, 1.0, 1.0);
+        println!("rect intersection: {:?}", collide_rects(r1, r2));
+    }
+}
 
-//probably a less stupid way to do bounds like filter for rects and get rightmost etc
-// putting rect in event is misleading maybe bound is better, that fn i deleted
+#[test]
+fn test_collision() {
+    // bruh every time i touch this delta vs absolutes
+
+    let mut entities = HashMap::new();
+    let mut collisions = Vec::new();
+    entities.insert(0, Entity::new(EntityKind::Player, Vec2::new(0.0+0.025, 0.0+0.025)).with_velocity(Vec2::new(1.0, 0.0)));
+    entities.insert(1, Entity::new(EntityKind::Player, Vec2::new(0.05+0.025, 0.0+0.025)));
+    println!("entities before: {:?}", entities);
+    collide_entity_entity(&entities, &mut collisions, 0.01);
+    println!("collisions: {:?}", collisions);
+    let bounds = movement_bounds(0, &collisions);
+    println!("bounds: {:?}", bounds); // looks correct to me, actually bound seems wrong
+    apply_movement(&mut entities, &collisions, 0.01);
+    println!("entities now: {:?}", entities);
+}

@@ -4,6 +4,7 @@ mod rect;
 mod entity;
 mod level;
 mod collision_system;
+mod gun;
 
 use glow::*;
 use std::error::Error;
