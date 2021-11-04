@@ -76,6 +76,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut game = Game::new(window_x / window_y);
 
         let mut held_keys: HashSet<glutin::event::VirtualKeyCode> = HashSet::new();
+        let mut normalized_cursor_pos = Vec2::new(0.0, 0.0);
 
         let mut dt = 1.0f64 / 60f64;
 
@@ -167,6 +168,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                             window_x = physical_size.width as f32;
                             window_y = physical_size.height as f32;
                             gl.viewport(0, 0, physical_size.width as i32, physical_size.height as i32);
+                            println!("aspect ratio: {:?}", window_x / window_y);
 
                         }
                         WindowEvent::CloseRequested => {
@@ -191,15 +193,28 @@ fn main() -> Result<(), Box<dyn Error>> {
                             },
                             _ => (),
                         }},
+                        WindowEvent::MouseInput {
+                            button: glutin::event::MouseButton::Left,
+                            state:state,
+                            ..
+                        } => {
+                            if *state == glutin::event::ElementState::Pressed {
+                                println!("input shoot to {:?}", normalized_cursor_pos);
+                                game.apply_command(InputCommand::Shoot(normalized_cursor_pos));
+                            } else {
+                                println!("input unshoot");
+                                game.apply_command(InputCommand::Unshoot);
+                            }
+                        },
                         WindowEvent::CursorMoved {
                             position: pos,
                             ..
                         } => {
-                            let screenspace_vec = Vec2::new(
+                            normalized_cursor_pos = Vec2::new(
                                 pos.x as f32 / window_x * window_x / window_y, 
                                 pos.y as f32 / window_y);
 
-                            game.apply_command(InputCommand::Look(screenspace_vec));
+                            game.apply_command(InputCommand::Look(normalized_cursor_pos));
                         },
                         _ => (),
                     },

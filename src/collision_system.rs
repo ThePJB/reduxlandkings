@@ -85,6 +85,21 @@ pub fn collide_entity_terrain(
     }
 }
 
+fn keep_entity_entity_collision(subject_key: u32, object_key: u32, entities: &HashMap<u32, Entity>) -> bool {
+    if subject_key == object_key {return false};
+    match (entities.get(&subject_key), entities.get(&object_key)) {
+        (Some(subject), Some(object)) => {
+            if subject.owner == object_key || object.owner == subject_key {
+                return false;
+            } else {
+                return true;
+            }
+        },
+        (_, None) => false,
+        (None, _) => false,
+    }
+} 
+
 pub fn collide_entity_entity(
         entities: &HashMap<u32, Entity>, 
         collisions: &mut Vec<CollisionEvent>, 
@@ -95,7 +110,7 @@ pub fn collide_entity_entity(
         let subject_rect_desired = subject.aabb.translate(subject.velocity * dt);
         
         for (object_key, object) in entities {
-            if subject_key == object_key {continue};
+            if !keep_entity_entity_collision(*subject_key, *object_key, entities) {continue};
             
             if let Some(penetration) = collide_rects(subject_rect_desired, object.aabb) {
 
@@ -113,10 +128,10 @@ fn movement_bounds(subject_key: u32, collisions: &Vec<CollisionEvent>) -> (f32, 
     let max_dx = collisions.iter().filter(|col| col.subject == subject_key)
         .filter(|col| col.penetration.x < 0.0)
         .map(|col| col.penetration.x)
-        .fold(f32::INFINITY, |a, b| a.min(b));  // feel like this should be max
+        .fold(f32::INFINITY, |a, b| a.min(b));
 
     let max_dy = collisions.iter().filter(|col| col.subject == subject_key)
-        .filter(|col| col.penetration.y < 0.0)  // hopefully coordinate system not cooked
+        .filter(|col| col.penetration.y < 0.0)
         .map(|col| col.penetration.y)
         .fold(f32::INFINITY, |a, b| a.min(b));
         
@@ -143,9 +158,10 @@ fn clamp(val: f32, min: f32, max: f32) -> f32 {
 
 pub fn apply_movement(entities: &mut HashMap<u32, Entity>, collisions: &Vec<CollisionEvent>, dt: f32) {
     for (entity_key, entity) in entities.iter_mut() {
-        let (min_x, max_x, min_y, max_y) = movement_bounds(*entity_key, collisions);
-        let x_movt = clamp(entity.velocity.x * dt, min_x, max_x);
-        let y_movt = clamp(entity.velocity.y * dt, min_y, max_y);
+        let (min_dx, max_dx, min_dy, max_dy) = movement_bounds(*entity_key, collisions);
+
+        let x_movt = entity.velocity.x * dt + clamp(0.0, min_dx, max_dx);
+        let y_movt = entity.velocity.y * dt + clamp(0.0, min_dy, max_dy);
 
         entity.aabb.x += x_movt;
         entity.aabb.y += y_movt;

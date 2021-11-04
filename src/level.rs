@@ -102,4 +102,23 @@ impl Level {
 
         level
     }
+
+    pub fn apply_command(&mut self, command: EntityCommand) {
+        match command {
+            EntityCommand::Move(id, x, y) => {
+                if let Some(ent) = self.entities.get_mut(&id) {
+                    ent.velocity.x = x;
+                    ent.velocity.y = y;
+                }},
+            EntityCommand::Shoot(id, x, y) => {
+                if let Some(ent) = self.entities.get_mut(&id) {
+                ent.want_shoot = true;
+                ent.previous_shoot_dir = Vec2::new(x, y);
+            }},
+            EntityCommand::Unshoot(id) => {
+                if let Some(ent) = self.entities.get_mut(&id) {
+                ent.want_shoot = false;
+            }},
+        }
+    }
 }

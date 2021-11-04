@@ -101,7 +101,10 @@ have tresury rooms etc
  - eating guns for $$$
 
 # Misc issues
-(Bad) Cooked jittering on collide: why?
-(Medium) Why autocomplete etc jank in this project, is it glams fault?
+(Medium) Why autocomplete etc jank in this project, is it glams fault? maybe its better to just remember shit anyway
 (Minor) black tear artifact
 (Minor) collision system hitch on walls in -X and -Y direction
+
+Shooting:
+ * bullet goes in wrong direction
+ * kill bullet when it hits terrain

@@ -1,6 +1,8 @@
 use glam::*;
 use glow::*;
 use std::collections::HashMap;
+use rand::prelude::*;
+
 use crate::level::*;
 use crate::renderer::*;
 use crate::rect::*;
@@ -11,6 +13,7 @@ use crate::collision_system::*;
 pub enum InputCommand {
     Look(Vec2),
     Shoot(Vec2),
+    Unshoot,
 
     // movt how
     // press schema - for when theres a lot of shit
@@ -29,6 +32,7 @@ pub struct Camera {
 }
 
 pub struct Game {
+    t: f32,
     pub camera: Camera,
     level: Level,
     look: Vec2,
@@ -59,30 +63,46 @@ impl Game {
             },
             player_id: 0,
             collisions: Vec::new(),
+            t: 0.0,
         }
     }
 
     pub fn update(&mut self, aspect_ratio: f32, dt: f32) {
+        self.t += dt;
+
         self.collisions.clear();
+
+        {   // Shooting
+            let mut new_bullets = Vec::new();
+
+            for (entity_key, entity) in self.level.entities.iter_mut() {
+                if entity.gun.update(entity.want_shoot, dt, self.t) {
+                    new_bullets.push(Entity::new(EntityKind::Bullet, entity.aabb.centroid())
+                        .with_velocity(entity.previous_shoot_dir * entity.gun.bullet_speed)
+                        .with_owner(*entity_key));
+                }
+            }
+
+            for new_bullet in new_bullets {
+                self.level.entities.insert(rand::thread_rng().gen(), new_bullet);
+            }
+        }
 
         collide_entity_entity(&self.level.entities, &mut self.collisions, dt);
         collide_entity_terrain(&self.level.entities, &self.level.tiles, self.level.grid_size, 
             self.level.side_length as i32, &mut self.collisions, dt);
 
-        apply_movement(&mut self.level.entities, &self.collisions, dt);
-
-        // this shouldnt have been here but also why does it fix screen shaking lol
-        /*
-        for (_, entity) in self.level.entities.iter_mut() {
-            entity.aabb.x += entity.velocity.x * dt as f32;
-            entity.aabb.y += entity.velocity.y * dt as f32;
+        for col in self.collisions.iter().filter(|col| col.subject == self.player_id) {
+            println!("Player collision: {:?} {:?}", col.object, col.penetration);
         }
-        */
+
+        apply_movement(&mut self.level.entities, &self.collisions, dt);
 
         // move camera
         if let Some(player) = self.level.entities.get(&self.player_id) {
             let player_pos = player.aabb.centroid();
             
+            // look is fucking up the camera matrix
 
             let look_strength = 0.2;
             let look_translation_x = self.look.x - aspect_ratio/2.0;
@@ -110,14 +130,15 @@ impl Game {
 
                 let tile_type = self.level.tiles[i*self.level.side_length + j];
 
+                renderer.draw_rect(tile_rect, Vec3::new(0.9, 0.9, 0.9), 1.0);
                 renderer.draw_rect(
-                    tile_rect,
+                    tile_rect.dilate(-0.003),
                     if tile_type == Tile::Open {
                         Vec3::new(0.8, 0.8, 0.4)
                     } else {
                         Vec3::new(0.2, 0.2, 0.4)
                     },
-                    1.0);
+                    0.6);
             }
         }
 
@@ -134,6 +155,7 @@ impl Game {
                 match ent.kind {
                     EntityKind::Player => Vec3::new(1.0, 1.0, 1.0),
                     EntityKind::WalkerShooter => Vec3::new(1.0, 0.0, 0.0),
+                    EntityKind::Bullet => Vec3::new(1.0, 1.0, 0.0),
                 },
                 0.5,
             );
@@ -145,7 +167,21 @@ impl Game {
             InputCommand::Look(p) => {
                 self.look = p
             },
-            InputCommand::Shoot(p) => {},
+            InputCommand::Shoot(normalized_pos) => {
+                // calculate play pos on screen, or look pos in world
+                let look_tform = self.camera.inverse_view.transform_point3a(Vec3A::new(normalized_pos.x, normalized_pos.y, 0.0));
+                let look_world_pos = Vec2::new(look_tform.x, look_tform.y);
+                println!("click world pos: {:?}", look_world_pos);
+                if let Some(player) = self.level.entities.get(&self.player_id) {
+                    let mut dir = (look_world_pos - player.aabb.centroid()).normalize();
+                    dir.y = -dir.y;
+                    // look theres some transform spaghetti here for sure but it works
+                    self.level.apply_command(EntityCommand::Shoot(self.player_id, dir.x, dir.y));
+                }
+            },
+            InputCommand::Unshoot => {
+                self.level.apply_command(EntityCommand::Unshoot(self.player_id));
+            },
             InputCommand::Move(p) => {
                 let player_speed = 0.5;
                 self.level.entities.get_mut(&self.player_id).unwrap().velocity = p * player_speed;
