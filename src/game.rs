@@ -1,4 +1,5 @@
-use glam::*;
+use glam::{Mat4, Vec3};
+use crate::kmath::*;
 use glow::*;
 use std::collections::HashMap;
 use rand::prelude::*;
@@ -108,15 +109,23 @@ impl Game {
 
         self.collisions.clear();
 
+        {   // AI time
+            let mut commands = Vec::new();
+            for (entity_id, entity) in self.level.entities.iter() {
+                entity.think(*entity_id, &self.level, &mut commands);
+            }
+            
+            for command in commands {
+                self.level.apply_command(command);
+            }
+        }
+
         {   // Shooting
             let mut new_bullets = Vec::new();
 
             for (entity_key, entity) in self.level.entities.iter_mut() {
                 if entity.gun.update(entity.want_shoot, dt, self.t) {
-                    new_bullets.push(Entity::new(EntityKind::Bullet, entity.aabb.centroid())
-                        .with_velocity(entity.previous_shoot_dir * entity.gun.bullet_speed)
-                        .with_owner(*entity_key)
-                        .with_damage(entity.gun.damage));
+                    entity.gun.make_bullets(&mut new_bullets, entity.aabb.centroid(), entity.previous_shoot_dir, *entity_key);
                 }
             }
 
@@ -124,6 +133,8 @@ impl Game {
                 self.level.entities.insert(rand::thread_rng().gen(), new_bullet);
             }
         }
+
+
 
         collide_entity_entity(&self.level.entities, &mut self.collisions, dt);
         collide_entity_terrain(&self.level.entities, &self.level.tiles, self.level.grid_size, 
@@ -247,7 +258,7 @@ impl Game {
                 dir.y = -dir.y;
                 dir = dir.normalize();
 
-                self.level.apply_command(EntityCommand::Shoot(self.player_id, dir.x, dir.y));
+                self.level.apply_command(EntityCommand::Shoot(self.player_id, dir));
 
 /*
                 // calculate play pos on screen, or look pos in world
@@ -267,7 +278,9 @@ impl Game {
             },
             InputCommand::Move(p) => {
                 let player_speed = 0.6;
-                self.level.entities.get_mut(&self.player_id).unwrap().velocity = p * player_speed;
+                if let Some(player) = self.level.entities.get_mut(&self.player_id) {
+                    player.velocity = p * player_speed;
+                }
             },
             InputCommand::Reset => {},
         }

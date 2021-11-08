@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use crate::entity::*;
 use crate::rect::*;
 use rand::prelude::*;
-use glam::*;
+use crate::kmath::*;
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub enum Tile {
@@ -108,15 +108,14 @@ impl Level {
 
     pub fn apply_command(&mut self, command: EntityCommand) {
         match command {
-            EntityCommand::Move(id, x, y) => {
+            EntityCommand::Move(id, vel) => {
                 if let Some(ent) = self.entities.get_mut(&id) {
-                    ent.velocity.x = x;
-                    ent.velocity.y = y;
+                    ent.velocity = vel;
                 }},
-            EntityCommand::Shoot(id, x, y) => {
+            EntityCommand::Shoot(id, dir) => {
                 if let Some(ent) = self.entities.get_mut(&id) {
                 ent.want_shoot = true;
-                ent.previous_shoot_dir = Vec2::new(x, y);
+                ent.previous_shoot_dir = dir;
             }},
             EntityCommand::Unshoot(id) => {
                 if let Some(ent) = self.entities.get_mut(&id) {

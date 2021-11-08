@@ -1,8 +1,8 @@
-use glam::*;
 use std::collections::HashMap;
 use crate::rect::*;
 use crate::level::*;
 use crate::entity::*;
+use crate::kmath::*;
 
 #[derive(Debug, Clone, Copy)]
 pub enum CollisionObject {

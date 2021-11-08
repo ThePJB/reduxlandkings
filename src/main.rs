@@ -5,10 +5,12 @@ mod entity;
 mod level;
 mod collision_system;
 mod gun;
+mod kmath;
 
 use glow::*;
 use std::error::Error;
-use glam::*;
+use glam::{Mat4};
+use kmath::*;
 use renderer::*;
 use rect::*;
 use game::*;

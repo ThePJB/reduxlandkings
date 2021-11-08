@@ -86,6 +86,8 @@ have tresury rooms etc
  - suicide guys
  - lazy dudes that dont follow you
  - bullet dodgers
+ - guy who splits in two on death
+ - guy who pieces of him fly off and spawn smaller guys
 
 ## Walkers
  - 3x3
@@ -104,10 +106,3 @@ have tresury rooms etc
 (Medium) Why autocomplete etc jank in this project, is it glams fault? maybe its better to just remember shit anyway
 (Minor) black tear artifact
 (Minor) collision system hitch on walls in -X and -Y direction
-
-Shooting:
- * kill bullet when it hits terrain
- * kill bullet and damage entity when it hits entity
- * camera matrix is wrong thanks look. ima have a break
-
- // need to update look or whatever when player moves mouse while shooting
