@@ -25,16 +25,16 @@ struct Walker {
 
 impl Level {
     pub fn new() -> Level {
-        let side_length = 40;
+        let side_length = 20;
 
         let mut level = Level {
             entities: HashMap::new(),
             tiles: vec!(Tile::Wall; side_length*side_length),
             side_length,
-            grid_size: 0.2,
+            grid_size: 0.15,
         };
 
-        let num_walkers = 40;
+        let num_walkers = 20;
         let walk_iters = 20;
         let p_change_dir = 0.3;
 
@@ -79,24 +79,27 @@ impl Level {
                 }
             }
         }
-
-        let (player_walker_i, player_walker) = walkers.iter()
-        .enumerate()
-        .max_by_key(|(i, w1)| {
-            let x = w1.pos.0 - side_length as i32/2;
-            let y = w1.pos.1 - side_length as i32/2;
-            x*x+y*y
+        
+        let mut walker_positions: Vec<(i32, i32)> = walkers.iter().map(|w| w.pos).collect::<Vec<(i32, i32)>>();
+        walker_positions.sort();
+        walker_positions.dedup();
+        
+        let player_pos = *walker_positions.iter().max_by_key(|(x, y)| {
+            let xp = x - side_length as i32/2;
+            let yp = y - side_length as i32/2;
+            xp*xp+yp*yp
         }).unwrap();
-
-        let player_pos_x = player_walker.pos.0 as f32 * level.grid_size + level.grid_size as f32/2.0;
-        let player_pos_y = player_walker.pos.1 as f32 * level.grid_size + level.grid_size as f32/2.0;
+        
+        let player_pos_x = player_pos.0 as f32 * level.grid_size + level.grid_size as f32/2.0;
+        let player_pos_y = player_pos.1 as f32 * level.grid_size + level.grid_size as f32/2.0;
 
         level.entities.insert(0, Entity::new(EntityKind::Player, Vec2::new(player_pos_x, player_pos_y)));
-        
-        for (i, w) in walkers.iter().enumerate() {
-            if i == player_walker_i {continue};
-            let walker_pos_x = w.pos.0 as f32 * level.grid_size + level.grid_size as f32/2.0;
-            let walker_pos_y = w.pos.1 as f32 * level.grid_size + level.grid_size as f32/2.0;
+
+        walker_positions.retain(|pos| *pos != player_pos);
+
+        for (x, y) in walker_positions {
+            let walker_pos_x = x as f32 * level.grid_size + level.grid_size as f32/2.0;
+            let walker_pos_y = y as f32 * level.grid_size + level.grid_size as f32/2.0;
             level.entities.insert(rand::thread_rng().gen(), Entity::new(EntityKind::WalkerShooter, Vec2::new(walker_pos_x, walker_pos_y)));
         }
 

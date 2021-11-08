@@ -16,6 +16,14 @@ impl Gun {
             bullet_speed: 2.0,
         }
     }
+    pub fn new_machinegun() -> Gun {
+        Gun {
+            damage: 1.0,
+            cooldown: 0.05,
+            last_shot: -1000.0,
+            bullet_speed: 1.5,
+        }
+    }
 
     // returns whether it does a shoot this frame
     // instead of the bool it could return the bullet entity, whatever
@@ -23,7 +31,6 @@ impl Gun {
         if squeeze {
             if t - self.last_shot > self.cooldown {
                 self.last_shot = t;
-                println!("shoot");
                 return true;
             }
         }

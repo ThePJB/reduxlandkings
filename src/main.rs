@@ -19,8 +19,8 @@ use std::time::{Duration, SystemTime};
 
 fn main() -> Result<(), Box<dyn Error>> {
 
-    let mut window_x = 1024.0;
-    let mut window_y = 768.0;
+    let mut window_x = 1600.0;
+    let mut window_y = 1200.0;
 
 
     unsafe {
@@ -76,8 +76,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut game = Game::new(window_x / window_y);
 
         let mut held_keys: HashSet<glutin::event::VirtualKeyCode> = HashSet::new();
+        let mut lmb = false;
         let mut normalized_cursor_pos = Vec2::new(0.0, 0.0);
-
         let mut dt = 1.0f64 / 60f64;
 
 
@@ -199,10 +199,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                             ..
                         } => {
                             if *state == glutin::event::ElementState::Pressed {
-                                println!("input shoot to {:?}", normalized_cursor_pos);
+                                lmb = true;
                                 game.apply_command(InputCommand::Shoot(normalized_cursor_pos));
                             } else {
-                                println!("input unshoot");
+                                lmb = false;
                                 game.apply_command(InputCommand::Unshoot);
                             }
                         },
@@ -215,6 +215,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 pos.y as f32 / window_y);
 
                             game.apply_command(InputCommand::Look(normalized_cursor_pos));
+                            if lmb {
+                                game.apply_command(InputCommand::Shoot(normalized_cursor_pos));
+                            }
                         },
                         _ => (),
                     },

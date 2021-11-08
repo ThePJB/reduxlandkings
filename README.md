@@ -106,5 +106,8 @@ have tresury rooms etc
 (Minor) collision system hitch on walls in -X and -Y direction
 
 Shooting:
- * bullet goes in wrong direction
  * kill bullet when it hits terrain
+ * kill bullet and damage entity when it hits entity
+ * camera matrix is wrong thanks look. ima have a break
+
+ // need to update look or whatever when player moves mouse while shooting

@@ -34,14 +34,44 @@ pub struct Camera {
 pub struct Game {
     t: f32,
     pub camera: Camera,
+    player_pos: Vec2,   // camera focus
+    look: Vec2,         // screen space
+    aspect_ratio: f32,
+
     level: Level,
-    look: Vec2,
     player_id: u32,
     collisions: Vec<CollisionEvent>,
 
 }
 
+
+#[test]
+fn test_screen_to_world() {
+    let mut game = Game::new(1.0);
+    game.player_pos = Vec2::new(5.0, 5.0);
+    game.look = Vec2::new(0.5, 0.5); // cursor in middle should cancel out look
+    let p = Vec2::new(0.0, 0.0); // top left
+    assert_eq!(game.screen_to_world(p), Vec2::new(4.5, 4.5));
+    
+    game.look = Vec2::new(0.0, 0.0);
+    assert_eq!(game.screen_to_world(p), Vec2::new(4.4, 4.4));
+}
+
+
 impl Game {
+    // screen is 0..aspect ratio in x and 0..1 in y
+    // ok well at least this works, fucking matrices
+    pub fn screen_to_world(&self, p: Vec2) -> Vec2 {
+        let screen_max = Vec2::new(self.aspect_ratio, 1.0);
+        let look_weight = 0.2;
+        return p + self.player_pos + look_weight*(self.look - 0.5*screen_max) - 0.5*screen_max;
+    }
+
+    // screen is 0..aspect ratio in x and 0..1 in y
+    pub fn world_to_screen(&self, p: Vec2) -> Vec2 {
+        Vec2::new(0.0, 0.0)
+    }
+
     pub fn new(aspect_ratio: f32) -> Game {
         let ortho = Mat4::orthographic_lh(
             0.0, aspect_ratio, 0.0, 1.0, 0.0, 1.0);
@@ -64,11 +94,17 @@ impl Game {
             player_id: 0,
             collisions: Vec::new(),
             t: 0.0,
+            player_pos: Vec2::new(0.0, 0.0),
+            aspect_ratio,
         }
     }
 
     pub fn update(&mut self, aspect_ratio: f32, dt: f32) {
         self.t += dt;
+        if let Some(player) = self.level.entities.get(&self.player_id) {
+            self.player_pos = player.aabb.centroid();
+        }
+        self.aspect_ratio = aspect_ratio;
 
         self.collisions.clear();
 
@@ -79,7 +115,8 @@ impl Game {
                 if entity.gun.update(entity.want_shoot, dt, self.t) {
                     new_bullets.push(Entity::new(EntityKind::Bullet, entity.aabb.centroid())
                         .with_velocity(entity.previous_shoot_dir * entity.gun.bullet_speed)
-                        .with_owner(*entity_key));
+                        .with_owner(*entity_key)
+                        .with_damage(entity.gun.damage));
                 }
             }
 
@@ -91,6 +128,34 @@ impl Game {
         collide_entity_entity(&self.level.entities, &mut self.collisions, dt);
         collide_entity_terrain(&self.level.entities, &self.level.tiles, self.level.grid_size, 
             self.level.side_length as i32, &mut self.collisions, dt);
+
+        // handle bullet collisions
+        for col in self.collisions.iter() {
+            let damage = if let Some(subject) = self.level.entities.get_mut(&col.subject) {
+                if subject.kind == EntityKind::Bullet {
+                    subject.health = 0.0;
+                    Some(subject.damage)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
+
+            match damage {
+                Some(damage_amount) => {match col.object {
+                    CollisionObject::Entity(id) => {
+                        if let Some(object) = self.level.entities.get_mut(&id) {
+                            object.health -= damage_amount;
+                        }
+                    },
+                    _ => {},
+                }},
+                None => {},
+            }
+        }
+
+        self.level.entities.retain(|_, ent| ent.health > 0.0);
 
         for col in self.collisions.iter().filter(|col| col.subject == self.player_id) {
             println!("Player collision: {:?} {:?}", col.object, col.penetration);
@@ -117,6 +182,15 @@ impl Game {
         // update projection mat (eg if aspect ratio changes)
         self.camera.projection = Mat4::orthographic_lh(0.0, aspect_ratio, 0.0, 1.0, 0.0, 1.0);
         self.camera.inverse_projection = self.camera.projection.inverse();
+
+        // calculate enemies remaining
+        let remaining_enemies = self.level.entities.iter().map(|(_, e)| e.kind).filter(|ek| *ek != EntityKind::Bullet && *ek != EntityKind::Player).count();
+        //println!("Remaining enemies: {}", remaining_enemies);
+
+        if remaining_enemies == 0 {
+            println!("you win!");
+            self.level = Level::new();
+        }
     }
 
     pub fn draw(&self, renderer: &mut Renderer) {
@@ -168,9 +242,17 @@ impl Game {
                 self.look = p
             },
             InputCommand::Shoot(normalized_pos) => {
+                let shoot_pos_world = self.screen_to_world(normalized_pos);
+                let mut dir = shoot_pos_world - self.player_pos;
+                dir.y = -dir.y;
+                dir = dir.normalize();
+
+                self.level.apply_command(EntityCommand::Shoot(self.player_id, dir.x, dir.y));
+
+/*
                 // calculate play pos on screen, or look pos in world
                 let look_tform = self.camera.inverse_view.transform_point3a(Vec3A::new(normalized_pos.x, normalized_pos.y, 0.0));
-                let look_world_pos = Vec2::new(look_tform.x, look_tform.y);
+                let look_world_pos = Vec2::new(look_tform.x, look_tform.y) + self.look;
                 println!("click world pos: {:?}", look_world_pos);
                 if let Some(player) = self.level.entities.get(&self.player_id) {
                     let mut dir = (look_world_pos - player.aabb.centroid()).normalize();
@@ -178,12 +260,13 @@ impl Game {
                     // look theres some transform spaghetti here for sure but it works
                     self.level.apply_command(EntityCommand::Shoot(self.player_id, dir.x, dir.y));
                 }
+                */
             },
             InputCommand::Unshoot => {
                 self.level.apply_command(EntityCommand::Unshoot(self.player_id));
             },
             InputCommand::Move(p) => {
-                let player_speed = 0.5;
+                let player_speed = 0.6;
                 self.level.entities.get_mut(&self.player_id).unwrap().velocity = p * player_speed;
             },
             InputCommand::Reset => {},
