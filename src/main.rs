@@ -188,11 +188,14 @@ fn main() -> Result<(), Box<dyn Error>> {
                             };
 
                             match (virtual_code, state) {
-                            (glutin::event::VirtualKeyCode::Escape, _) => {
-                                gl.delete_program(program);
-                                renderer.destroy(&gl);
-                                *control_flow = ControlFlow::Exit;
-                            },
+                                (glutin::event::VirtualKeyCode::Escape, _) => {
+                                    gl.delete_program(program);
+                                    renderer.destroy(&gl);
+                                    *control_flow = ControlFlow::Exit;
+                                },
+                                (glutin::event::VirtualKeyCode::R, glutin::event::ElementState::Released) => {
+                                    game.apply_command(InputCommand::Reset)
+                                },
                             _ => (),
                         }},
                         WindowEvent::MouseInput {

@@ -124,7 +124,9 @@ impl Game {
             let mut new_bullets = Vec::new();
 
             for (entity_key, entity) in self.level.entities.iter_mut() {
-                if entity.gun.update(entity.want_shoot, dt, self.t) {
+                let will_shoot = entity.gun.will_shoot(entity.want_shoot, self.t);
+                entity.gun.update(entity.want_shoot, will_shoot, self.t);
+                if will_shoot {
                     entity.gun.make_bullets(&mut new_bullets, entity.aabb.centroid(), entity.previous_shoot_dir, *entity_key);
                 }
             }
@@ -240,6 +242,7 @@ impl Game {
                 match ent.kind {
                     EntityKind::Player => Vec3::new(1.0, 1.0, 1.0),
                     EntityKind::WalkerShooter => Vec3::new(1.0, 0.0, 0.0),
+                    EntityKind::RunnerGunner => Vec3::new(0.0, 0.0, 1.0),
                     EntityKind::Bullet => Vec3::new(1.0, 1.0, 0.0),
                 },
                 0.5,
@@ -276,13 +279,12 @@ impl Game {
             InputCommand::Unshoot => {
                 self.level.apply_command(EntityCommand::Unshoot(self.player_id));
             },
-            InputCommand::Move(p) => {
-                let player_speed = 0.6;
-                if let Some(player) = self.level.entities.get_mut(&self.player_id) {
-                    player.velocity = p * player_speed;
-                }
+            InputCommand::Move(dir) => {
+                self.level.apply_command(EntityCommand::Move(self.player_id, dir));
             },
-            InputCommand::Reset => {},
+            InputCommand::Reset => {
+                self.level = Level::new();
+            },
         }
     }
 }

@@ -100,7 +100,12 @@ impl Level {
         for (x, y) in walker_positions {
             let walker_pos_x = x as f32 * level.grid_size + level.grid_size as f32/2.0;
             let walker_pos_y = y as f32 * level.grid_size + level.grid_size as f32/2.0;
-            level.entities.insert(rand::thread_rng().gen(), Entity::new(EntityKind::WalkerShooter, Vec2::new(walker_pos_x, walker_pos_y)));
+
+            let entity_kinds = vec!(EntityKind::WalkerShooter, EntityKind::RunnerGunner);
+
+            level.entities.insert(rand::thread_rng().gen(), Entity::new(
+                entity_kinds[rand::thread_rng().gen_range(0..entity_kinds.len())], 
+                Vec2::new(walker_pos_x, walker_pos_y)));
         }
 
         level
@@ -108,9 +113,9 @@ impl Level {
 
     pub fn apply_command(&mut self, command: EntityCommand) {
         match command {
-            EntityCommand::Move(id, vel) => {
+            EntityCommand::Move(id, dir) => {
                 if let Some(ent) = self.entities.get_mut(&id) {
-                    ent.velocity = vel;
+                    ent.velocity = ent.speed * dir;
                 }},
             EntityCommand::Shoot(id, dir) => {
                 if let Some(ent) = self.entities.get_mut(&id) {
@@ -121,6 +126,97 @@ impl Level {
                 if let Some(ent) = self.entities.get_mut(&id) {
                 ent.want_shoot = false;
             }},
+        }
+    }
+
+    pub fn raycast(&self, ray_origin: Vec2, ray_destination: Vec2) -> Option<Vec2> {
+        let round_up = |u: f32, side_length: f32| {
+            (u/side_length).ceil() * side_length
+        };
+        let round_down = |u: f32, side_length: f32| {
+            (u/side_length).floor() * side_length
+        };
+        let bound = |u, sign: i32, side_length| {
+            if sign >= 0 {
+                let ru = round_up(u, side_length);
+                if ru == u { side_length } else {ru - u}
+            } else {
+                let ru = round_down(u, side_length);
+                if ru == u { side_length } else {u - ru}
+            }
+        };
+
+        let mut grid_x = (ray_origin.x / self.grid_size) as i32;
+        let mut grid_y = (ray_origin.y / self.grid_size) as i32;
+
+        let grid_dest_x = (ray_destination.x / self.grid_size) as i32;
+        let grid_dest_y = (ray_destination.y / self.grid_size) as i32;
+
+        let delta_vec = ray_destination - ray_origin;
+        let ray_dir = delta_vec.normalize();
+
+        // increment these
+        let mut actual_march_x: f32 = ray_origin.x;
+        let mut actual_march_y: f32 = ray_origin.y;
+
+        let sign_x = if delta_vec.x > 0.0 { 1 } else { -1 };
+        let sign_y = if delta_vec.y > 0.0 { 1 } else { -1 };
+
+        // cycle through these
+        let side_length = self.grid_size; // should just be elems
+        let mut next_tile_in_x: f32 = bound(actual_march_x, sign_x, side_length);
+        let mut next_tile_in_y: f32 = bound(actual_march_y, sign_y, side_length);
+
+        let mut n = 0;
+        loop {
+            if n > 9999 { 
+                panic!("raycast infinite loop");
+                println!("bailing");
+                return None; 
+            }
+            n += 1;
+            // might be a bit inefficient, checking same thing repeatedly, dont care its more readable rn
+            // check to terminate (wall strike)
+            if self.tiles[(grid_x*self.side_length as i32 + grid_y) as usize] == Tile::Wall {
+                return Some(Vec2::new(actual_march_x, actual_march_y));
+            }
+
+            if grid_x == grid_dest_x && grid_y == grid_dest_y {
+                return None;
+            }
+
+            let x_distance = bound(actual_march_x, sign_x, side_length);
+            let y_distance = bound(actual_march_y, sign_y, side_length);
+
+            let x_want = (x_distance / ray_dir.x).abs();
+            let y_want = (y_distance / ray_dir.y).abs();
+            
+            let (x_to_march, y_to_march) = // this msut be wrong
+                if x_want <= y_want {
+                    let x_to_march = x_distance;
+                    let y_to_march = ray_dir.div_scalar(ray_dir.x).mul_scalar(x_distance).y;
+                    (x_to_march.abs(), y_to_march.abs())
+                } else {
+                    let y_to_march = y_distance;
+                    let x_to_march = ray_dir.div_scalar(ray_dir.y).mul_scalar(y_distance).x;
+                    (x_to_march.abs(), y_to_march.abs())
+                };
+
+            // march the ray
+            actual_march_x += x_to_march * sign_x as f32;
+            actual_march_y += y_to_march * sign_y as f32;
+
+            // calculate grid update
+            next_tile_in_x -= x_to_march;
+            if next_tile_in_x <= 0.0 {
+                next_tile_in_x += side_length;
+                grid_x += sign_x;
+            }
+            next_tile_in_y -= y_to_march;
+            if next_tile_in_y <= 0.0 {
+                next_tile_in_y += side_length;
+                grid_y += sign_y;
+            }
         }
     }
 }

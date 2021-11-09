@@ -21,6 +21,7 @@ impl Vec2 {
     }
     
     pub fn spread(&self, amount: f32) -> Vec2 {
+        if amount == 0.0 {return *self};
         let roll = rand::thread_rng().gen_range(-amount..amount);
         return self.rotate(roll);
     }
@@ -63,5 +64,13 @@ impl std::ops::Div<f32> for Vec2 {
 
     fn div(self, _rhs: f32) -> Vec2 {
         self.div_scalar(_rhs)
+    }
+}
+
+impl std::ops::Neg for Vec2 {
+    type Output = Vec2;
+
+    fn neg(self) -> Vec2 {
+        self.mul_scalar(-1.0)
     }
 }

@@ -85,6 +85,9 @@ pub fn collide_entity_terrain(
     }
 }
 
+// ok extend this so bullets dont collide
+// and no friendly fire
+
 fn keep_entity_entity_collision(subject_key: u32, object_key: u32, entities: &HashMap<u32, Entity>) -> bool {
     if subject_key == object_key {return false};
     match (entities.get(&subject_key), entities.get(&object_key)) {

@@ -18,9 +18,9 @@ Level: entities and simulation stuff, no specific player
 
 
 # TODO
- - Collision system
- - Shooting
- - Minimap
+ - Minimap - probably need to fuck off camera matrix. or use a different one
+ - health
+ - bullet collisions etc
  
 ## Guns
 OK so what is a gun?
@@ -46,6 +46,11 @@ OK so what is a gun?
  
  * dude crafting and combining guns would be really fun, kinda PoEy which is always good
  * why not do PoE multiverse stuff too
+
+ there was that gun fifo idea too. robot makes sense if you do it in esoteric ways. maybe you are a killbot and you hate all this organic life
+ could add and send to back for crafting
+ maybe a mutate and send to back or + and send to back whatever
+ right click eat for hp or something, maybe it takes a sec
 
 you should be a 3 legged robot and game be full of robot jokes
 what was that idea I had before about all your guns use a stack, sure that might be fun as well
@@ -88,6 +93,7 @@ have tresury rooms etc
  - bullet dodgers
  - guy who splits in two on death
  - guy who pieces of him fly off and spawn smaller guys
+ - dudes who only run at you when you look at them
 
 ## Walkers
  - 3x3
