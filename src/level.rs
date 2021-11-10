@@ -101,7 +101,7 @@ impl Level {
             let walker_pos_x = x as f32 * level.grid_size + level.grid_size as f32/2.0;
             let walker_pos_y = y as f32 * level.grid_size + level.grid_size as f32/2.0;
 
-            let entity_kinds = vec!(EntityKind::WalkerShooter, EntityKind::RunnerGunner);
+            let entity_kinds = vec!(EntityKind::WalkerShooter, EntityKind::RunnerGunner, EntityKind::Chungus);
 
             level.entities.insert(rand::thread_rng().gen(), Entity::new(
                 entity_kinds[rand::thread_rng().gen_range(0..entity_kinds.len())], 

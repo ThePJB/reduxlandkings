@@ -158,7 +158,7 @@ impl Gun {
         }
     }
 
-    pub fn make_bullets(&self, bullets: &mut Vec<Entity>, pos: Vec2, dir: Vec2, owner: u32) {
+    pub fn make_bullets(&self, bullets: &mut Vec<Entity>, pos: Vec2, dir: Vec2, owner_id: u32, owner_team: EntityTeam) {
         for i in 0..self.bullets_per_shot {
             let idx = i - self.bullets_per_shot/2; // for 1: 0 for 3: -1 etc
             let spread_float = self.spread * idx as f32 / self.bullets_per_shot as f32;
@@ -168,7 +168,8 @@ impl Gun {
 
             bullets.push(Entity::new(EntityKind::Bullet, pos)
                             .with_velocity(adjusted_dir * self.bullet_speed)
-                            .with_owner(owner)
+                            .with_owner(owner_id)
+                            .with_team(owner_team)
                             .with_damage(self.damage));
         }
     }

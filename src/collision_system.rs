@@ -94,9 +94,15 @@ fn keep_entity_entity_collision(subject_key: u32, object_key: u32, entities: &Ha
         (Some(subject), Some(object)) => {
             if subject.owner == object_key || object.owner == subject_key {
                 return false;
-            } else {
-                return true;
             }
+            if subject.kind == EntityKind::Bullet && object.kind == EntityKind::Bullet {
+                return false;
+            }
+            if (subject.kind == EntityKind::Bullet || object.kind == EntityKind::Bullet) && subject.team == object.team {
+                return false;
+            }
+
+            return true;
         },
         (_, None) => false,
         (None, _) => false,

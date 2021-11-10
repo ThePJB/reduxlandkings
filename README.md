@@ -18,9 +18,9 @@ Level: entities and simulation stuff, no specific player
 
 
 # TODO
- - Minimap - probably need to fuck off camera matrix. or use a different one
- - health
  - bullet collisions etc
+ - health
+ - Minimap - probably need to fuck off camera matrix. or use a different one. get to the bottom of it
  
 ## Guns
 OK so what is a gun?
@@ -94,6 +94,7 @@ have tresury rooms etc
  - guy who splits in two on death
  - guy who pieces of him fly off and spawn smaller guys
  - dudes who only run at you when you look at them
+ - dudes who run away when you look at them, backstabbers. shotty
 
 ## Walkers
  - 3x3
@@ -108,7 +109,19 @@ have tresury rooms etc
  - eating guns for health
  - eating guns for $$$
 
+ battery mechanic? rewarding clear speed
+ maybe instead of progress on clear spawn an exit
+ good if it could signpost the kind of area
+ random sort of levels
+ pretty CA eg for grass or whatever
+ give enemies more of a brain for object permanence + wandering
+ also can base behaviour on their guns burst cooldown
+
 # Misc issues
 (Medium) Why autocomplete etc jank in this project, is it glams fault? maybe its better to just remember shit anyway
 (Minor) black tear artifact
 (Minor) collision system hitch on walls in -X and -Y direction
+
+they sometimes freeze if player isnt moving, looks pretty unnatural lol
+  select an entity to see its thoughts
+  raycasting is buggy

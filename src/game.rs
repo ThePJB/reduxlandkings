@@ -127,7 +127,7 @@ impl Game {
                 let will_shoot = entity.gun.will_shoot(entity.want_shoot, self.t);
                 entity.gun.update(entity.want_shoot, will_shoot, self.t);
                 if will_shoot {
-                    entity.gun.make_bullets(&mut new_bullets, entity.aabb.centroid(), entity.previous_shoot_dir, *entity_key);
+                    entity.gun.make_bullets(&mut new_bullets, entity.aabb.centroid(), entity.previous_shoot_dir, *entity_key, entity.team);
                 }
             }
 
@@ -243,6 +243,7 @@ impl Game {
                     EntityKind::Player => Vec3::new(1.0, 1.0, 1.0),
                     EntityKind::WalkerShooter => Vec3::new(1.0, 0.0, 0.0),
                     EntityKind::RunnerGunner => Vec3::new(0.0, 0.0, 1.0),
+                    EntityKind::Chungus => Vec3::new(0.0, 0.0, 0.5),
                     EntityKind::Bullet => Vec3::new(1.0, 1.0, 0.0),
                 },
                 0.5,
