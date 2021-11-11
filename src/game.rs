@@ -173,57 +173,112 @@ impl Game {
     }
 
     pub fn draw(&self, renderer: &mut Renderer) {
-        let scale = 1.2;
-        let look_strength = 0.2;
-
-        let dims = scale * Vec2::new(self.aspect_ratio, 1.0);
-        let look_vec = (scale*self.look) - dims/2.0;
-        let center = self.player_pos + look_strength * look_vec;
-
-        renderer.top_left = center - dims/2.0;
-        renderer.bot_right = center + dims/2.0;
-
-        for i in 0..self.level.side_length {
-            for j in 0..self.level.side_length {
-                let tile_rect = Rect::new(
-                    i as f32 * self.level.grid_size, 
-                    j as f32 * self.level.grid_size, 
-                    self.level.grid_size,
-                    self.level.grid_size);
-
-                let tile_type = self.level.tiles[i*self.level.side_length + j];
-
-                renderer.draw_rect(tile_rect, Vec3::new(0.9, 0.9, 0.9), 1.0);
+        {   // Level
+            let scale = 1.2;
+            let look_strength = 0.2;
+    
+            let dims = scale * Vec2::new(self.aspect_ratio, 1.0);
+            let look_vec = (scale*self.look) - dims/2.0;
+            let center = self.player_pos + look_strength * look_vec;
+    
+            renderer.top_left = center - dims/2.0;
+            renderer.bot_right = center + dims/2.0;
+    
+            for i in 0..self.level.side_length {
+                for j in 0..self.level.side_length {
+                    let tile_rect = Rect::new(
+                        i as f32 * self.level.grid_size, 
+                        j as f32 * self.level.grid_size, 
+                        self.level.grid_size,
+                        self.level.grid_size);
+    
+                    let tile_type = self.level.tiles[i*self.level.side_length + j];
+    
+                    renderer.draw_rect(tile_rect, Vec3::new(0.9, 0.9, 0.9), 1.0);
+                    renderer.draw_rect(
+                        tile_rect.dilate(-0.003),
+                        if tile_type == Tile::Open {
+                            Vec3::new(0.8, 0.8, 0.4)
+                        } else {
+                            Vec3::new(0.2, 0.2, 0.4)
+                        },
+                        0.6);
+                }
+            }
+    
+            for (_, ent) in self.level.entities.iter() {
+                let ent_rect = Rect::new(
+                    ent.aabb.x,
+                    ent.aabb.y,
+                    ent.aabb.w,
+                    ent.aabb.h,
+                );
+    
                 renderer.draw_rect(
-                    tile_rect.dilate(-0.003),
-                    if tile_type == Tile::Open {
-                        Vec3::new(0.8, 0.8, 0.4)
-                    } else {
-                        Vec3::new(0.2, 0.2, 0.4)
+                    ent_rect,
+                    match ent.kind {
+                        EntityKind::Player => Vec3::new(1.0, 1.0, 1.0),
+                        EntityKind::WalkerShooter => Vec3::new(1.0, 0.0, 0.0),
+                        EntityKind::RunnerGunner => Vec3::new(0.0, 0.0, 1.0),
+                        EntityKind::Chungus => Vec3::new(0.0, 0.0, 0.5),
+                        EntityKind::Bullet => Vec3::new(1.0, 1.0, 0.0),
                     },
-                    0.6);
+                    0.5,
+                );
             }
         }
 
-        for (_, ent) in self.level.entities.iter() {
-            let ent_rect = Rect::new(
-                ent.aabb.x,
-                ent.aabb.y,
-                ent.aabb.w,
-                ent.aabb.h,
-            );
+        {   // Minimap
+            renderer.top_left = Vec2::new(0.0, 0.0);
+            renderer.bot_right = Vec2::new(self.aspect_ratio, 1.0);
 
-            renderer.draw_rect(
-                ent_rect,
-                match ent.kind {
-                    EntityKind::Player => Vec3::new(1.0, 1.0, 1.0),
-                    EntityKind::WalkerShooter => Vec3::new(1.0, 0.0, 0.0),
-                    EntityKind::RunnerGunner => Vec3::new(0.0, 0.0, 1.0),
-                    EntityKind::Chungus => Vec3::new(0.0, 0.0, 0.5),
-                    EntityKind::Bullet => Vec3::new(1.0, 1.0, 0.0),
-                },
-                0.5,
-            );
+            let mm_border = Rect::new(0.0, 0.7, 0.3, 0.3).dilate(-0.02);
+            renderer.draw_rect(mm_border, Vec3::new(0.0, 0.0, 0.0), 0.5);
+            let mm_rect = mm_border.dilate(-0.01);
+
+            let level_w = self.level.grid_size * self.level.side_length as f32;
+
+            for i in 0..self.level.side_length {
+                for j in 0..self.level.side_length {
+                    let tile_rect = Rect::new(
+                        i as f32 * self.level.grid_size / level_w * mm_rect.w + mm_rect.x, 
+                        j as f32 * self.level.grid_size / level_w * mm_rect.h + mm_rect.y, 
+                        self.level.grid_size / level_w * mm_rect.w,
+                        self.level.grid_size / level_w * mm_rect.h);
+    
+                    let tile_type = self.level.tiles[i*self.level.side_length + j];
+    
+                    renderer.draw_rect(
+                        tile_rect,
+                        if tile_type == Tile::Open {
+                            Vec3::new(0.8, 0.8, 0.4)
+                        } else {
+                            Vec3::new(0.2, 0.2, 0.4)
+                        },
+                        0.6);
+                }
+            }
+
+            let player_rect = Rect::new_centered(
+                self.player_pos.x / level_w * mm_rect.w + mm_rect.x,
+                self.player_pos.y / level_w * mm_rect.w + mm_rect.y,
+                0.01, 0.01);
+            renderer.draw_rect(player_rect, Vec3::new(1.0, 1.0, 1.0), 0.61);
+        }
+
+        {   // HP bar
+            let hp_percentage = if let Some(player) = self.level.entities.get(&self.player_id) {
+                player.health / player.max_health
+            } else { 
+                0.0 
+            };
+
+            let hp_border = Rect::new(0.0, 0.65, 0.3, 0.08).dilate(-0.02);
+            renderer.draw_rect(hp_border, Vec3::new(0.0, 0.0, 0.0), 0.5);
+            let mut hp_bar = hp_border.dilate(-0.01);
+            hp_bar.w *= hp_percentage;
+            
+            renderer.draw_rect(hp_bar, Vec3::new(1.0, 0.0, 0.0), 0.55);
         }
     }
 

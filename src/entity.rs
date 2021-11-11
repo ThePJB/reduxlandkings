@@ -40,6 +40,7 @@ pub struct Entity {
     pub team: EntityTeam,
 
     pub health: f32,
+    pub max_health: f32,
     
     pub damage: f32,
 
@@ -119,6 +120,7 @@ impl Entity {
             previous_shoot_dir: Vec2::new(1.0, 0.0),
             owner: 123123, // sentinel
             health: health,
+            max_health: health,
             damage: 0.0,
             speed: speed,
             team: team,

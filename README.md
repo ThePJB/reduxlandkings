@@ -140,3 +140,9 @@ game should be able to do screen to world and world to screen (world to screen u
 also remove size spaghetti
 
 reimplement look
+
+
+
+ok time to implement minimap and hppppp
+
+a lot of AI stuff could be implicit random procedural eg tendency to run or not as a fn of time
