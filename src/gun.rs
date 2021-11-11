@@ -102,10 +102,23 @@ impl Gun {
         }
     }
 
+    pub fn on_cooldown(&self, t: f32) -> bool {
+        t - self.state.last_shot < self.cooldown
+    }
+
+    pub fn on_burst_cooldown(&self, t: f32) -> bool {
+        match self.action {
+            Action::Burst(max, burst_cooldown) => {(self.state.burst_count >= max || self.state.burst_count == 0)
+                && t - self.state.last_burst > burst_cooldown},
+            _ => false,
+        }
+        
+    }
+
     // will the gun shoot this frame?
     pub fn will_shoot(&self, squeeze: bool, t: f32) -> bool {
         // no shoot due to cooldown
-        if t - self.state.last_shot < self.cooldown {
+        if self.on_cooldown(t) {
             return false;
         }
 

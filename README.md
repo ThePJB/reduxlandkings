@@ -125,3 +125,18 @@ have tresury rooms etc
 they sometimes freeze if player isnt moving, looks pretty unnatural lol
   select an entity to see its thoughts
   raycasting is buggy
+
+
+  probably just have set transform in renderer
+  draw some lines and shit, get to the bottom of why raycasting is being a fucc
+  click on enemies to see their brain work
+  yea soundz g
+
+
+
+ok fixing transforms etc is getting there. Where should it live? Probably in game.
+game just needs to know if aspect ratio changes.
+game should be able to do screen to world and world to screen (world to screen uses renderer)
+also remove size spaghetti
+
+reimplement look

@@ -10,6 +10,34 @@ pub enum Tile {
     Open,
 }
 
+#[derive(Debug)]
+pub struct LevelGenParams {
+    side_length: i32,
+    num_walkers: i32,
+    walk_iters: i32,
+    p_change_dir: f32,
+}
+
+impl LevelGenParams {
+    pub fn new() -> LevelGenParams {
+        LevelGenParams {
+            side_length: 20,
+            num_walkers: 20,
+            walk_iters: 20,
+            p_change_dir: 0.3,
+        }
+    }
+    pub fn new_rand() -> LevelGenParams {
+        let mut rng = rand::thread_rng();
+        LevelGenParams {
+            side_length: rng.gen_range(15..50),
+            num_walkers: rng.gen_range(15..50),
+            walk_iters: rng.gen_range(5..40),
+            p_change_dir: rng.gen_range(0.1..0.5),
+        }
+    }
+}
+
 pub struct Level {
     pub entities: HashMap<u32, Entity>, 
     pub tiles: Vec<Tile>,
@@ -25,39 +53,36 @@ struct Walker {
 
 impl Level {
     pub fn new() -> Level {
-        let side_length = 20;
+        let params = LevelGenParams::new_rand();
+        println!("Level gen params: {:?}", params);
 
         let mut level = Level {
             entities: HashMap::new(),
-            tiles: vec!(Tile::Wall; side_length*side_length),
-            side_length,
-            grid_size: 0.15,
+            tiles: vec!(Tile::Wall; (params.side_length*params.side_length) as usize),
+            side_length: params.side_length as usize,
+            grid_size: 0.2,
         };
-
-        let num_walkers = 20;
-        let walk_iters = 20;
-        let p_change_dir = 0.3;
 
         let mut walkers = Vec::new();
         let dirs = [(1, 0), (-1,0), (0, -1), (0, 1)];
 
-        for _ in 0..num_walkers {
+        for _ in 0..params.num_walkers {
             walkers.push(Walker {
-                pos: (side_length as i32/2, side_length as i32/2),
+                pos: (params.side_length/2, params.side_length/2),
                 dir: rand::thread_rng().gen_range(0..4),
                 alive: true,
             });
         }
 
-        level.tiles[side_length/2 * side_length + side_length/2 as usize] = Tile::Open;
-        for _ in 0..walk_iters {
+        level.tiles[(params.side_length/2 * params.side_length + params.side_length/2) as usize] = Tile::Open;
+        for _ in 0..params.walk_iters {
             for w in walkers.iter_mut() {
                 if !w.alive {
                     continue;
                 }
 
                 // maybe change direction
-                if rand::thread_rng().gen_range(0.0..1.0) < p_change_dir {
+                if rand::thread_rng().gen_range(0.0..1.0) < params.p_change_dir {
                     let mut idx = rand::thread_rng().gen_range(0..3);
                     if idx >= w.dir {
                         idx += 1;
@@ -70,12 +95,12 @@ impl Level {
                 let dir = dirs[w.dir as usize];
                 let candidate_pos = (w.pos.0 + dir.0, w.pos.1 + dir.1);
                 if candidate_pos.0 <= 0 || candidate_pos.1 <= 0 || 
-                        candidate_pos.0 >= side_length as i32-1 || 
-                        candidate_pos.1 >= side_length as i32-1 {
+                        candidate_pos.0 >= params.side_length-1 || 
+                        candidate_pos.1 >= params.side_length-1 {
                     w.alive = false;
                 } else {
                     w.pos = candidate_pos;
-                    level.tiles[w.pos.0 as usize * side_length + w.pos.1 as usize] = Tile::Open;
+                    level.tiles[(w.pos.0 * params.side_length + w.pos.1) as usize] = Tile::Open;
                 }
             }
         }
@@ -85,8 +110,8 @@ impl Level {
         walker_positions.dedup();
         
         let player_pos = *walker_positions.iter().max_by_key(|(x, y)| {
-            let xp = x - side_length as i32/2;
-            let yp = y - side_length as i32/2;
+            let xp = x - params.side_length/2;
+            let yp = y - params.side_length/2;
             xp*xp+yp*yp
         }).unwrap();
         
@@ -219,4 +244,54 @@ impl Level {
             }
         }
     }
+}
+
+#[test]
+pub fn test_raycast() {
+    let level = Level {
+        entities: HashMap::new(),
+        tiles: vec!(
+            Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall,
+            Tile::Wall, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Wall,
+            Tile::Wall, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Wall,
+            Tile::Wall, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Wall,
+            Tile::Wall, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Wall,
+            Tile::Wall, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Wall,
+            Tile::Wall, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Wall,
+            Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall,
+        ),
+        side_length: 8,
+        grid_size: 1.0,
+    };
+    
+    assert_eq!(level.raycast(Vec2::new(1.1, 1.1), Vec2::new(6.9, 6.9)), None);
+    assert_eq!(level.raycast(Vec2::new(1.1, 1.1), Vec2::new(1.1, 6.9)), None);
+    assert_eq!(level.raycast(Vec2::new(1.1, 1.1), Vec2::new(6.9, 1.1)), None);
+    assert_eq!(level.raycast(Vec2::new(1.1, 1.1), Vec2::new(7.1, 1.1)), Some(Vec2::new(7.0, 1.1)));
+    assert_eq!(level.raycast(Vec2::new(1.1, 1.1), Vec2::new(7.1, 7.1)), Some(Vec2::new(7.0, 7.0)));
+}
+
+#[test]
+pub fn test_raycast2() {
+    let level = Level {
+        entities: HashMap::new(),
+        tiles: vec!(
+            Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall,
+            Tile::Wall, Tile::Open, Tile::Open, Tile::Wall, Tile::Open, Tile::Open, Tile::Open, Tile::Wall,
+            Tile::Wall, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Wall,
+            Tile::Wall, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Wall,
+            Tile::Wall, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Wall,
+            Tile::Wall, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Wall, Tile::Wall, Tile::Wall,
+            Tile::Wall, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Open, Tile::Wall,
+            Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall, Tile::Wall,
+        ),
+        side_length: 8,
+        grid_size: 1.0,
+    };
+    
+    assert_eq!(level.raycast(Vec2::new(1.1, 1.1), Vec2::new(6.9, 6.9)), Some(Vec2::new(5.0, 5.0)));
+    assert_eq!(level.raycast(Vec2::new(1.1, 1.1), Vec2::new(1.1, 6.9)), Some(Vec2::new(1.1, 3.0)));
+    assert_eq!(level.raycast(Vec2::new(1.1, 1.1), Vec2::new(6.9, 1.1)), None);
+    assert_eq!(level.raycast(Vec2::new(1.1, 1.1), Vec2::new(7.1, 1.1)), Some(Vec2::new(7.0, 1.1)));
+    assert_eq!(level.raycast(Vec2::new(1.1, 1.1), Vec2::new(7.1, 7.1)), Some(Vec2::new(5.0, 5.0)));
 }

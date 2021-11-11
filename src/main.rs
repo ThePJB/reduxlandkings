@@ -9,7 +9,7 @@ mod kmath;
 
 use glow::*;
 use std::error::Error;
-use glam::{Mat4};
+use glam::{Vec3, Mat4};
 use kmath::*;
 use renderer::*;
 use rect::*;
@@ -23,6 +23,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut window_x = 1600.0;
     let mut window_y = 1200.0;
+
+    let projection_mat = Mat4::orthographic_lh(0.0, 1.0, 1.0, 0.0, 0.0, 1.0);
+    let projection_inverse = projection_mat.inverse();
 
 
     unsafe {
@@ -39,7 +42,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .unwrap();
         let gl = glow::Context::from_loader_function(|s| window.get_proc_address(s) as *const _);
 
-        let mut renderer = Renderer::new(&gl);
+        let mut renderer = Renderer::new(&gl, window_x/window_y);
 
         let program = gl.create_program().expect("Cannot create program");
 
@@ -109,10 +112,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                         let mut motion_vec = Vec2::new(0.0, 0.0);
                         if held_keys.contains(&glutin::event::VirtualKeyCode::W) {
-                            motion_vec.y += 1.0;
+                            motion_vec.y -= 1.0;
                         }
                         if held_keys.contains(&glutin::event::VirtualKeyCode::S) {
-                            motion_vec.y -= 1.0;
+                            motion_vec.y += 1.0;
                         }
                         if held_keys.contains(&glutin::event::VirtualKeyCode::A) {
                             motion_vec.x -= 1.0;
@@ -132,13 +135,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                         gl.clear(glow::COLOR_BUFFER_BIT);
 
                         renderer.clear();
+
                         
                         gl.uniform_matrix_4_f32_slice(gl.get_uniform_location(program, "projection").as_ref(),
-                            false, &game.camera.projection.to_cols_array());
+                            false, &projection_mat.to_cols_array());
                         
-                        gl.uniform_matrix_4_f32_slice(gl.get_uniform_location(program, "view").as_ref(),
-                            false, &game.camera.view.to_cols_array());
-
                         game.draw(&mut renderer);
 
                         renderer.present(&gl);
@@ -231,4 +232,24 @@ fn main() -> Result<(), Box<dyn Error>> {
             });
         }
     }
+}
+
+fn renderer_test(renderer: &mut Renderer) {
+    renderer.top_left = Vec2::new(1.0, 1.0);
+    renderer.bot_right = Vec2::new(3.0, 3.0);
+
+    renderer.draw_rect(Rect::new(2.0, 2.0, 1.0, 1.0), Vec3::new(1.0, 0.0, 0.0), 0.0);
+
+    // top left blue
+    renderer.draw_rect(Rect::new(1.0, 1.0, 0.1, 0.1), Vec3::new(0.0, 0.0, 1.0), 0.0);
+
+    // bot right magenta
+    renderer.draw_rect(Rect::new(2.9, 2.9, 0.1, 0.1), Vec3::new(1.0, 0.0, 1.0), 0.0);
+
+    // bot left green
+    renderer.draw_rect(Rect::new(1.0, 2.9, 0.1, 0.1), Vec3::new(0.0, 1.0, 0.0), 0.0);
+
+    // top right cyan
+    renderer.draw_rect(Rect::new(2.9, 1.0, 0.1, 0.1), Vec3::new(0.0, 1.0, 1.0), 0.0);
+
 }

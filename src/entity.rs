@@ -47,13 +47,12 @@ pub struct Entity {
 
 impl Entity {
     pub fn new(kind: EntityKind, pos: Vec2) -> Entity {
-        let entity_scale = 0.8;
         let side_length = match kind {
-            EntityKind::Player => 0.05 * entity_scale,
+            EntityKind::Player => 0.05,
             EntityKind::WalkerShooter |
-            EntityKind::RunnerGunner => 0.05 * entity_scale,
-            EntityKind::Chungus => 0.1 * entity_scale,
-            EntityKind::Bullet => 0.02 * entity_scale,
+            EntityKind::RunnerGunner => 0.05,
+            EntityKind::Chungus => 0.1,
+            EntityKind::Bullet => 0.02,
         };
         let gun = match kind {
             EntityKind::Player => {Gun::new_burstrifle()},
@@ -146,7 +145,7 @@ impl Entity {
         self
     }
 
-    pub fn think(&self, self_id: u32, level: &Level, commands: &mut Vec<EntityCommand>) {
+    pub fn think(&self, self_id: u32, level: &Level, commands: &mut Vec<EntityCommand>, t: f32) {
         match self.kind {
             EntityKind::Chungus |
             EntityKind::WalkerShooter => {
@@ -172,7 +171,11 @@ impl Entity {
                     let target_pos = target.aabb.centroid();
                     let dvec = target_pos - this_pos;
 
-                    let coward_radius = 0.25;
+                    let coward_radius = if self.gun.on_burst_cooldown(t) {
+                        0.4
+                    } else {
+                        0.25
+                    };
                     let neutral_radius = 0.05;
 
                     // Moving
