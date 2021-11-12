@@ -13,6 +13,14 @@ impl Rect {
     pub fn new(x: f32, y: f32, w: f32, h: f32) -> Rect {
         Rect{x,y,w,h}
     }
+    pub fn child(&self, x: f32, y: f32, w: f32, h: f32) -> Rect {
+        Rect::new(
+            self.x + x*self.w,
+            self.y + y*self.h,
+            self.w * w,
+            self.h * h,
+        )
+    }
     pub fn centroid(&self) -> Vec2 {
         Vec2::new(self.x + self.w/2.0, self.y + self.h/2.0)
     }

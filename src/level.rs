@@ -1,3 +1,4 @@
+use glam::Vec3;
 use std::collections::HashMap;
 use crate::entity::*;
 use crate::rect::*;
@@ -5,9 +6,11 @@ use rand::prelude::*;
 use crate::kmath::*;
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
-pub enum Tile {
-    Wall,
-    Open,
+pub struct Tile {
+    pub walkable: bool,
+    pub overhang: bool,
+    pub underhang: bool,
+    pub edge: bool,
 }
 
 #[derive(Debug)]
@@ -43,6 +46,9 @@ pub struct Level {
     pub tiles: Vec<Tile>,
     pub side_length: usize,
     pub grid_size: f32,
+
+    pub floor_colour: Vec3,
+    pub wall_colour: Vec3,
 }
 
 struct Walker {
@@ -56,11 +62,16 @@ impl Level {
         let params = LevelGenParams::new_rand();
         println!("Level gen params: {:?}", params);
 
+        let start_tile = Tile {walkable: false, overhang: false, underhang: false, edge: false};
+
         let mut level = Level {
             entities: HashMap::new(),
-            tiles: vec!(Tile::Wall; (params.side_length*params.side_length) as usize),
+            tiles: vec!(start_tile; (params.side_length*params.side_length) as usize),
             side_length: params.side_length as usize,
             grid_size: 0.2,
+            floor_colour: Vec3::new(0.75, 0.75, 0.5),
+            wall_colour: Vec3::new(0.2, 0.2, 0.4),
+
         };
 
         let mut walkers = Vec::new();
@@ -74,7 +85,7 @@ impl Level {
             });
         }
 
-        level.tiles[(params.side_length/2 * params.side_length + params.side_length/2) as usize] = Tile::Open;
+        level.tiles[(params.side_length/2 * params.side_length + params.side_length/2) as usize].walkable = true;
         for _ in 0..params.walk_iters {
             for w in walkers.iter_mut() {
                 if !w.alive {
@@ -100,7 +111,7 @@ impl Level {
                     w.alive = false;
                 } else {
                     w.pos = candidate_pos;
-                    level.tiles[(w.pos.0 * params.side_length + w.pos.1) as usize] = Tile::Open;
+                    level.tiles[(w.pos.0 * params.side_length + w.pos.1) as usize].walkable = true;
                 }
             }
         }
@@ -126,14 +137,59 @@ impl Level {
             let walker_pos_x = x as f32 * level.grid_size + level.grid_size as f32/2.0;
             let walker_pos_y = y as f32 * level.grid_size + level.grid_size as f32/2.0;
 
-            let entity_kinds = vec!(EntityKind::WalkerShooter, EntityKind::RunnerGunner, EntityKind::Chungus);
+            let entity_kinds = vec!(EntityKind::WalkerShooter, EntityKind::RunnerGunner, EntityKind::Chungus, EntityKind::GunPickup);
 
             level.entities.insert(rand::thread_rng().gen(), Entity::new(
                 entity_kinds[rand::thread_rng().gen_range(0..entity_kinds.len())], 
                 Vec2::new(walker_pos_x, walker_pos_y)));
         }
 
+        // CA pass
+        for i in 0..level.side_length as i32 {
+            for j in 0..level.side_length as i32 {
+                let maybe_tile_below = level.get_tile(i, j+1);
+                let maybe_tile_above = level.get_tile(i, j-1);
+                let mut this_tile = level.get_tile_mut(i, j).unwrap();
+
+                if this_tile.walkable {
+                    match maybe_tile_above {
+                        Some(above) if !above.walkable => {this_tile.underhang = true},
+                        _ => {},
+                    }
+                    match maybe_tile_below {
+                        Some(below) if !below.walkable => {this_tile.overhang = true},
+                        _ => {},
+                    }
+                } else {
+                    match maybe_tile_below {
+                        Some(below) if below.walkable => {this_tile.edge = true},
+                        _ => {},
+                    }
+                }
+            }
+        }
+
         level
+    }
+
+    pub fn get_tile(&self, i: i32, j: i32) -> Option<Tile> {
+        if i >= 0 && i < self.side_length as i32 && j >= 0 && j < self.side_length as i32 {
+            Some(self.tiles[i as usize*self.side_length + j as usize])
+        } else {
+            None
+        }
+    }
+
+    pub fn get_tile_mut(&mut self, i: i32, j: i32) -> Option<&mut Tile> {
+        if i >= 0 && i < self.side_length as i32 && j >= 0 && j < self.side_length as i32 {
+            Some(&mut self.tiles[i as usize*self.side_length + j as usize])
+        } else {
+            None
+        }
+    }
+
+    pub fn set_tile(&mut self, i: i32, j: i32, t: Tile) {
+        self.tiles[i as usize*self.side_length + j as usize] = t
     }
 
     pub fn apply_command(&mut self, command: EntityCommand) {
@@ -202,7 +258,7 @@ impl Level {
             n += 1;
             // might be a bit inefficient, checking same thing repeatedly, dont care its more readable rn
             // check to terminate (wall strike)
-            if self.tiles[(grid_x*self.side_length as i32 + grid_y) as usize] == Tile::Wall {
+            if !self.tiles[(grid_x*self.side_length as i32 + grid_y) as usize].walkable {
                 return Some(Vec2::new(actual_march_x, actual_march_y));
             }
 
@@ -245,7 +301,7 @@ impl Level {
         }
     }
 }
-
+/*
 #[test]
 pub fn test_raycast() {
     let level = Level {
@@ -262,6 +318,8 @@ pub fn test_raycast() {
         ),
         side_length: 8,
         grid_size: 1.0,
+        floor_colour: Vec3::new(0.0, 0.0, 0.0),
+        wall_colour: Vec3::new(0.0, 0.0, 0.0),
     };
     
     assert_eq!(level.raycast(Vec2::new(1.1, 1.1), Vec2::new(6.9, 6.9)), None);
@@ -287,6 +345,8 @@ pub fn test_raycast2() {
         ),
         side_length: 8,
         grid_size: 1.0,
+        floor_colour: Vec3::new(0.0, 0.0, 0.0),
+        wall_colour: Vec3::new(0.0, 0.0, 0.0),
     };
     
     assert_eq!(level.raycast(Vec2::new(1.1, 1.1), Vec2::new(6.9, 6.9)), Some(Vec2::new(5.0, 5.0)));
@@ -295,3 +355,4 @@ pub fn test_raycast2() {
     assert_eq!(level.raycast(Vec2::new(1.1, 1.1), Vec2::new(7.1, 1.1)), Some(Vec2::new(7.0, 1.1)));
     assert_eq!(level.raycast(Vec2::new(1.1, 1.1), Vec2::new(7.1, 7.1)), Some(Vec2::new(5.0, 5.0)));
 }
+*/

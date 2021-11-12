@@ -1,7 +1,7 @@
 use glam::{Mat4, Vec3};
 use crate::kmath::*;
 use glow::*;
-use std::collections::HashMap;
+use std::collections::VecDeque;
 use rand::prelude::*;
 
 use crate::level::*;
@@ -9,6 +9,7 @@ use crate::renderer::*;
 use crate::rect::*;
 use crate::entity::*;
 use crate::collision_system::*;
+use crate::gun::*;
 
 #[derive(Debug)]
 pub enum InputCommand {
@@ -16,6 +17,7 @@ pub enum InputCommand {
     Shoot(Vec2),
     Unshoot,
     Move(Vec2),
+    EatGun,
 
     Reset,
 }
@@ -29,6 +31,8 @@ pub struct Game {
     level: Level,
     player_id: u32,
     collisions: Vec<CollisionEvent>,
+
+    player_gun_fifo: VecDeque<Gun>,
 
 }
 
@@ -45,6 +49,17 @@ fn test_screen_to_world() {
     assert_eq!(game.screen_to_world(p), Vec2::new(4.4, 4.4));
 }
 
+fn draw_gun_icon(renderer: &mut Renderer, r: Rect, height: f32) {
+
+    renderer.draw_rect(r, Vec3::new(0.0, 0.0, 0.0), height);
+
+    let inner = r.dilate(-0.005);
+
+    renderer.draw_rect(inner, Vec3::new(1.0, 1.0, 1.0), height + 1.0);
+
+    renderer.draw_rect(inner.child(0.1, 0.2, 0.8, 0.3), Vec3::new(0.0, 0.0, 0.0), height + 2.0);
+    renderer.draw_rect(inner.child(0.1, 0.2, 0.3, 0.5), Vec3::new(0.0, 0.0, 0.0), height + 2.0);
+}
 
 impl Game {
     // screen is 0..aspect ratio in x and 0..1 in y
@@ -55,14 +70,9 @@ impl Game {
         return p + self.player_pos + look_weight*(self.look - 0.5*screen_max) - 0.5*screen_max;
     }
 
-    // screen is 0..aspect ratio in x and 0..1 in y
-    pub fn world_to_screen(&self, p: Vec2) -> Vec2 {
-        Vec2::new(0.0, 0.0)
-    }
-
     pub fn new(aspect_ratio: f32) -> Game {
 
-        Game {
+        let mut game = Game {
             level: Level::new(),
             look: Vec2::new(0.0, 0.0),
             player_id: 0,
@@ -70,7 +80,13 @@ impl Game {
             t: 0.0,
             player_pos: Vec2::new(0.0, 0.0),
             aspect_ratio,
-        }
+            player_gun_fifo: VecDeque::new(),
+        };
+
+        game.player_gun_fifo.push_back(Gun::new_machinegun());
+        game.player_gun_fifo.push_back(Gun::new_shotgun());
+        
+        game
     }
 
     pub fn update(&mut self, aspect_ratio: f32, dt: f32) {
@@ -109,8 +125,6 @@ impl Game {
             }
         }
 
-
-
         collide_entity_entity(&self.level.entities, &mut self.collisions, dt);
         collide_entity_terrain(&self.level.entities, &self.level.tiles, self.level.grid_size, 
             self.level.side_length as i32, &mut self.collisions, dt);
@@ -141,6 +155,44 @@ impl Game {
             }
         }
 
+        // handle pickups
+        for col in self.collisions.iter() {
+            let gun = if col.subject == self.player_id {
+                match col.object {
+                    CollisionObject::Entity(id) => {
+                        if let Some(entity) = self.level.entities.get(&id) {
+                            if entity.kind == EntityKind::GunPickup {
+                                Some(entity.gun)
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    },
+                    _ => None,
+                }
+            } else {
+                None
+            };
+
+            match gun {
+                Some(pickup_gun) => {
+                    match col.object {
+                        CollisionObject::Entity(id) => {
+                            if let Some(entity) = self.level.entities.get_mut(&id) {
+                                entity.health = 0.0
+                            }
+                        },
+                    _ => {},
+                    }
+
+                    self.player_gun_fifo.push_back(pickup_gun);
+                },
+                None => {},
+            }
+        }
+
         self.level.entities.retain(|_, ent| ent.health > 0.0);
 
         for col in self.collisions.iter().filter(|col| col.subject == self.player_id) {
@@ -149,21 +201,8 @@ impl Game {
 
         apply_movement(&mut self.level.entities, &self.collisions, dt);
 
-        // move camera
-        if let Some(player) = self.level.entities.get(&self.player_id) {
-            let player_pos = player.aabb.centroid();
-            
-            // look is fucking up the camera matrix
-
-            let look_strength = 0.2;
-            let look_translation_x = self.look.x - aspect_ratio/2.0;
-            let look_translation_y = 0.5 - self.look.y;
-
-
-        }
-
         // calculate enemies remaining
-        let remaining_enemies = self.level.entities.iter().map(|(_, e)| e.kind).filter(|ek| *ek != EntityKind::Bullet && *ek != EntityKind::Player).count();
+        let remaining_enemies = self.level.entities.iter().map(|(_, e)| e.kind).filter(|ek| *ek != EntityKind::Bullet && *ek != EntityKind::Player && *ek != EntityKind::GunPickup).count();
         //println!("Remaining enemies: {}", remaining_enemies);
 
         if remaining_enemies == 0 {
@@ -172,7 +211,25 @@ impl Game {
         }
     }
 
+
     pub fn draw(&self, renderer: &mut Renderer) {
+        let floor_height = 10.0;
+        let wall_height = 100.0;
+        let wall_front_height = 101.0;
+        let wall_overhang_height = 500.0;
+        let wall_underhang_height = 150.0;
+        let entity_height = 200.0;
+
+        let hud_back_height = 800.0;
+        let hud_front_height = 900.0;
+
+        let overhang_amount = 0.15;
+        let underhang_amount = 0.15;
+        let wall_front_amount = 0.5;    // to fix jank corner case will need to be the same as overhang, will look ok once characters are taller or tiles are smaller
+
+
+
+
         {   // Level
             let scale = 1.2;
             let look_strength = 0.2;
@@ -192,17 +249,23 @@ impl Game {
                         self.level.grid_size,
                         self.level.grid_size);
     
-                    let tile_type = self.level.tiles[i*self.level.side_length + j];
-    
-                    renderer.draw_rect(tile_rect, Vec3::new(0.9, 0.9, 0.9), 1.0);
-                    renderer.draw_rect(
-                        tile_rect.dilate(-0.003),
-                        if tile_type == Tile::Open {
-                            Vec3::new(0.8, 0.8, 0.4)
-                        } else {
-                            Vec3::new(0.2, 0.2, 0.4)
-                        },
-                        0.6);
+                    let tile = self.level.tiles[i*self.level.side_length + j];
+
+                    let edge_colour = Vec3::new(0.1, 0.1, 0.3);
+                    if tile.walkable {
+                        renderer.draw_rect(tile_rect, self.level.floor_colour, floor_height)
+                    } else {
+                        renderer.draw_rect(tile_rect, self.level.wall_colour, wall_height);
+                    }
+                    if tile.overhang {
+                        renderer.draw_rect(tile_rect.child(0.0, 1.0 - overhang_amount, 1.0, overhang_amount), self.level.wall_colour, wall_overhang_height);
+                    }
+                    if tile.underhang {
+                        renderer.draw_rect(tile_rect.child(0.0, 0.0, 1.0, underhang_amount), edge_colour, wall_underhang_height);
+                    }
+                    if tile.edge {
+                        renderer.draw_rect(tile_rect.child(0.0, 0.5, 1.0, 0.5), edge_colour, wall_front_height);
+                    }
                 }
             }
     
@@ -213,18 +276,16 @@ impl Game {
                     ent.aabb.w,
                     ent.aabb.h,
                 );
-    
-                renderer.draw_rect(
-                    ent_rect,
-                    match ent.kind {
-                        EntityKind::Player => Vec3::new(1.0, 1.0, 1.0),
-                        EntityKind::WalkerShooter => Vec3::new(1.0, 0.0, 0.0),
-                        EntityKind::RunnerGunner => Vec3::new(0.0, 0.0, 1.0),
-                        EntityKind::Chungus => Vec3::new(0.0, 0.0, 0.5),
-                        EntityKind::Bullet => Vec3::new(1.0, 1.0, 0.0),
-                    },
-                    0.5,
-                );
+
+
+                match ent.kind {
+                    EntityKind::Player => renderer.draw_rect(ent_rect, Vec3::new(1.0, 1.0, 1.0), entity_height),
+                    EntityKind::WalkerShooter => renderer.draw_rect(ent_rect, Vec3::new(1.0, 0.0, 0.0), entity_height),
+                    EntityKind::RunnerGunner => renderer.draw_rect(ent_rect, Vec3::new(0.0, 0.0, 1.0), entity_height),
+                    EntityKind::Chungus => renderer.draw_rect(ent_rect, Vec3::new(0.0, 0.0, 0.5), entity_height),
+                    EntityKind::Bullet => renderer.draw_rect(ent_rect, Vec3::new(1.0, 1.0, 0.0), entity_height),
+                    EntityKind::GunPickup => draw_gun_icon(renderer, ent_rect, entity_height),
+                };
             }
         }
 
@@ -233,7 +294,7 @@ impl Game {
             renderer.bot_right = Vec2::new(self.aspect_ratio, 1.0);
 
             let mm_border = Rect::new(0.0, 0.7, 0.3, 0.3).dilate(-0.02);
-            renderer.draw_rect(mm_border, Vec3::new(0.0, 0.0, 0.0), 0.5);
+            renderer.draw_rect(mm_border, Vec3::new(0.0, 0.0, 0.0), hud_back_height);
             let mm_rect = mm_border.dilate(-0.01);
 
             let level_w = self.level.grid_size * self.level.side_length as f32;
@@ -246,16 +307,17 @@ impl Game {
                         self.level.grid_size / level_w * mm_rect.w,
                         self.level.grid_size / level_w * mm_rect.h);
     
-                    let tile_type = self.level.tiles[i*self.level.side_length + j];
+                    let tile = self.level.tiles[i*self.level.side_length + j];
     
                     renderer.draw_rect(
                         tile_rect,
-                        if tile_type == Tile::Open {
+                        
+                        if tile.walkable {
                             Vec3::new(0.8, 0.8, 0.4)
                         } else {
                             Vec3::new(0.2, 0.2, 0.4)
                         },
-                        0.6);
+                        hud_front_height);
                 }
             }
 
@@ -263,7 +325,7 @@ impl Game {
                 self.player_pos.x / level_w * mm_rect.w + mm_rect.x,
                 self.player_pos.y / level_w * mm_rect.w + mm_rect.y,
                 0.01, 0.01);
-            renderer.draw_rect(player_rect, Vec3::new(1.0, 1.0, 1.0), 0.61);
+            renderer.draw_rect(player_rect, Vec3::new(1.0, 1.0, 1.0), hud_front_height + 1.0);
         }
 
         {   // HP bar
@@ -274,11 +336,36 @@ impl Game {
             };
 
             let hp_border = Rect::new(0.0, 0.65, 0.3, 0.08).dilate(-0.02);
-            renderer.draw_rect(hp_border, Vec3::new(0.0, 0.0, 0.0), 0.5);
+            renderer.draw_rect(hp_border, Vec3::new(0.0, 0.0, 0.0), hud_back_height);
             let mut hp_bar = hp_border.dilate(-0.01);
             hp_bar.w *= hp_percentage;
             
-            renderer.draw_rect(hp_bar, Vec3::new(1.0, 0.0, 0.0), 0.55);
+            renderer.draw_rect(hp_bar, Vec3::new(1.0, 0.0, 0.0), hud_front_height);
+        }
+
+        {   // Gun gui
+            // current
+            draw_gun_icon(renderer, Rect::new(0.02, 0.02, 0.06, 0.06), hud_front_height);
+
+            let ammo_percentage = if let Some(player) = self.level.entities.get(&self.player_id) {
+                player.gun.state.ammo as f32 / player.gun.max_ammo as f32
+            } else { 
+                0.0 
+            };
+
+            let ammo_border = Rect::new(0.1, 0.03, 0.15, 0.04);
+            renderer.draw_rect(ammo_border, Vec3::new(0.0, 0.0, 0.0), hud_back_height);
+            let mut ammo_bar = ammo_border.dilate(-0.01);
+            ammo_bar.w *= ammo_percentage;
+            
+            renderer.draw_rect(ammo_bar, Vec3::new(1.0, 1.0, 0.0), hud_front_height);
+
+            let mut ypos = 0.08;
+            for gun in self.player_gun_fifo.iter() {
+                ypos += 0.01; // padding
+                draw_gun_icon(renderer, Rect::new(0.02, ypos, 0.04, 0.04), hud_front_height);
+                ypos += 0.04; // padding
+            }
         }
     }
 
@@ -302,6 +389,17 @@ impl Game {
             InputCommand::Reset => {
                 self.level = Level::new();
             },
+            InputCommand::EatGun => {
+                if let Some(player) = self.level.entities.get_mut(&self.player_id) {
+                    if let Some(next_gun) = self.player_gun_fifo.pop_front() {
+                        player.gun = next_gun;
+                        player.health += 1.0;
+                        if player.health > player.max_health {
+                            player.health = player.max_health;
+                        }
+                    }
+                }
+            }
         }
     }
 }

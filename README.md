@@ -146,3 +146,14 @@ reimplement look
 ok time to implement minimap and hppppp
 
 a lot of AI stuff could be implicit random procedural eg tendency to run or not as a fn of time
+
+
+ok todos
+cheeky level gen, CA it to make it 3d, draw heights will be mad useful here
+
+could add underhang for graphics, whatever
+
+--------
+
+mad lookin fresh af
+might do gun stack modus next

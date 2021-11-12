@@ -67,7 +67,7 @@ pub fn collide_entity_terrain(
                 if ty < 0 || ty >= terrain_side_length {continue};
 
                 if let Some(tile) = terrain.get((tx * terrain_side_length + ty) as usize) {
-                    if *tile == Tile::Wall {
+                    if !tile.walkable {
                         let tile_rect = Rect::new(tx as f32 * terrain_grid_size, ty as f32 * terrain_grid_size, terrain_grid_size, terrain_grid_size);
 
                         if let Some(penetration) = collide_rects(subject_rect_desired, tile_rect) {
@@ -99,6 +99,12 @@ fn keep_entity_entity_collision(subject_key: u32, object_key: u32, entities: &Ha
                 return false;
             }
             if (subject.kind == EntityKind::Bullet || object.kind == EntityKind::Bullet) && subject.team == object.team {
+                return false;
+            }
+            if subject.kind == EntityKind::Bullet && object.kind == EntityKind::GunPickup {
+                return false;
+            }
+            if subject.kind == EntityKind::GunPickup && object.kind != EntityKind::Player {
                 return false;
             }
 

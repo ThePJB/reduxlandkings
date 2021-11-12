@@ -10,7 +10,7 @@ pub enum EntityKind {
     RunnerGunner,
     Chungus,
     Bullet,
-    
+    GunPickup,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -54,43 +54,24 @@ impl Entity {
             EntityKind::RunnerGunner => 0.05,
             EntityKind::Chungus => 0.1,
             EntityKind::Bullet => 0.02,
+            EntityKind::GunPickup => 0.04,
         };
         let gun = match kind {
             EntityKind::Player => {Gun::new_burstrifle()},
-            EntityKind::WalkerShooter => {Gun {
-                bullet_speed: 0.5,
-                damage: 0.5,
-                cooldown: 1.1,
-                random_spread: 0.05,
-                bullets_per_shot: 1,
-                spread: 0.0,
-                action: Action::Auto,
-
-                state: GunState::new(),
-            }}
-            EntityKind::RunnerGunner => {Gun {
-                bullet_speed: 0.45,
-                damage: 0.5,
-                cooldown: 0.05,
-                random_spread: 0.2,
-                bullets_per_shot: 1,
-                spread: 0.0,
-                action: Action::Burst(5, 1.5),
-
-                state: GunState::new(),
-            }}
-            EntityKind::Chungus => {Gun {
-                bullet_speed: 0.35,
-                damage: 0.5,
-                cooldown: 0.1,
-                random_spread: 0.3,
-                bullets_per_shot: 5,
-                spread: 0.5,
-                action: Action::Burst(4, 4.0),
-
-                state: GunState::new(),
-            }}
-            _ => {Gun::new()}
+            EntityKind::WalkerShooter => {
+                Gun::new(0.5, 1.1, 0.5, 0.05, 9999999)
+            }
+            EntityKind::RunnerGunner => {
+                Gun::new(0.5, 0.05, 0.45, 0.2, 9999999)
+                    .with_burst(5, 1.5)
+            }
+            EntityKind::Chungus => {
+                Gun::new(0.5, 0.1, 0.35, 0.3, 9999999)
+                    .with_burst(4, 4.0)
+                    .with_multishot(5, 0.5)
+            }
+            EntityKind::GunPickup => {Gun::new_machinegun()}
+            _ => {Gun::new(1.0, 1.0, 1.0, 1.0, 1)}
         };
         let speed = match kind {
             EntityKind::Player => 0.6,

@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut window_x = 1600.0;
     let mut window_y = 1200.0;
 
-    let projection_mat = Mat4::orthographic_lh(0.0, 1.0, 1.0, 0.0, 0.0, 1.0);
+    let projection_mat = Mat4::orthographic_lh(0.0, 1.0, 1.0, 0.0, 1000.0, 0.0);
     let projection_inverse = projection_mat.inverse();
 
 
@@ -41,6 +41,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .make_current()
             .unwrap();
         let gl = glow::Context::from_loader_function(|s| window.get_proc_address(s) as *const _);
+        gl.enable(DEPTH_TEST);
 
         let mut renderer = Renderer::new(&gl, window_x/window_y);
 
@@ -132,7 +133,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         game.update(window_x / window_y, dt as f32);
 
                         // draw
-                        gl.clear(glow::COLOR_BUFFER_BIT);
+                        gl.clear(glow::COLOR_BUFFER_BIT | glow::DEPTH_BUFFER_BIT);
 
                         renderer.clear();
 
@@ -199,6 +200,13 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 },
                             _ => (),
                         }},
+                        WindowEvent::MouseInput {
+                            button: glutin::event::MouseButton::Right,
+                            state: glutin::event::ElementState::Pressed,
+                            ..
+                        } => {
+                            game.apply_command(InputCommand::EatGun);
+                        }
                         WindowEvent::MouseInput {
                             button: glutin::event::MouseButton::Left,
                             state:state,

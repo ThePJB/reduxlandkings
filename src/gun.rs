@@ -2,28 +2,30 @@ use crate::kmath::*;
 use rand::prelude::*;
 use crate::entity::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct GunState {
     pub last_shot: f32,
     pub last_burst: f32,
     pub burst_count: i32,
     pub repeat: bool,
     pub compelled: bool,
+    pub ammo: i32,
 }
 
 impl GunState {
-    pub fn new() -> GunState {
+    pub fn new(ammo: i32) -> GunState {
         GunState {
             repeat: false,
             compelled: false,
             burst_count: 0,
             last_shot: -10000.0,
             last_burst: -10000.0,
+            ammo: ammo,
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Gun {
     pub damage: f32,
     pub cooldown: f32,
@@ -31,6 +33,9 @@ pub struct Gun {
     pub random_spread: f32,
     
     pub bullets_per_shot: i32,
+
+    pub max_ammo: i32,
+
     pub spread: f32,
     
     pub action: Action,
@@ -39,7 +44,7 @@ pub struct Gun {
     
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Action {
     Semi,
     Burst(i32, f32),    // semi burst auto burst?
@@ -47,59 +52,49 @@ pub enum Action {
 }
 
 impl Gun {
-    pub fn new() -> Gun {
+    pub fn new(damage: f32, cooldown: f32, bullet_speed: f32, random_spread: f32, ammo: i32) -> Gun {
         Gun {
-            damage: 1.0,
-            cooldown: 0.5,
-            bullet_speed: 2.0,
-            random_spread: 0.01,
+            damage,
+            cooldown,
+            bullet_speed,
+            random_spread,
+            max_ammo: ammo,
             
             bullets_per_shot: 1,
             spread: 0.0,
-            action: Action::Semi,
-
-            state: GunState::new(),
-        }
-    }
-    pub fn new_machinegun() -> Gun {
-        Gun {
-            damage: 1.0,
-            cooldown: 0.05,
-            bullet_speed: 1.5,
-            random_spread: 0.01,
-            bullets_per_shot: 3,
-            spread: 0.5,
             action: Action::Auto,
 
-            state: GunState::new(),
+            state: GunState::new(ammo),
         }
     }
-    pub fn new_burstrifle() -> Gun {
-        Gun {
-            damage: 1.0,
-            cooldown: 0.02,
-            bullet_speed: 1.5,
-            random_spread: 0.01,
-            bullets_per_shot: 1,
-            spread: 0.0,
-            action: Action::Burst(3, 0.33),
-
-            state: GunState::new(),
-        }
+    pub fn with_multishot(mut self, count: i32, arc: f32) -> Gun {
+        self.bullets_per_shot = count;
+        self.spread = arc;
+        self
+    }
+    pub fn with_burst(mut self, count: i32, cooldown: f32) -> Gun {
+        self.action = Action::Burst(count, cooldown);
+        self
+    }
+    pub fn with_semi_auto(mut self) -> Gun {
+        self.action = Action::Semi;
+        self
     }
 
-    pub fn new_shotgun() -> Gun {
-        Gun {
-            damage: 1.0,
-            cooldown: 0.7,
-            bullet_speed: 1.3,
-            random_spread: 0.1,
-            bullets_per_shot: 5,
-            spread: 0.7,
-            action: Action::Semi,
 
-            state: GunState::new(),
+    pub fn new_machinegun() -> Gun {
+        Gun::new(1.0, 0.05, 1.5, 0.01, 100)
+            .with_multishot(3, 0.5)
         }
+        pub fn new_burstrifle() -> Gun {
+            Gun::new(1.0, 0.02, 1.5, 0.01, 100)
+            .with_burst(3, 0.33)
+        }
+        
+        pub fn new_shotgun() -> Gun {
+            Gun::new(1.0, 0.7, 1.3, 0.1, 15)
+            .with_multishot(5, 0.5)
+            .with_semi_auto()
     }
 
     pub fn on_cooldown(&self, t: f32) -> bool {
@@ -119,6 +114,10 @@ impl Gun {
     pub fn will_shoot(&self, squeeze: bool, t: f32) -> bool {
         // no shoot due to cooldown
         if self.on_cooldown(t) {
+            return false;
+        }
+
+        if self.state.ammo <= 0 {
             return false;
         }
 
@@ -150,6 +149,8 @@ impl Gun {
 
         if did_shoot {
             self.state.last_shot = t;
+
+            self.state.ammo -= 1;
 
             match self.action {
                 Action::Semi => {},
