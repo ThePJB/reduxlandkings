@@ -2,6 +2,51 @@ use crate::kmath::*;
 use rand::prelude::*;
 use crate::entity::*;
 
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
+pub enum GunTrait {
+    Manual,       // Semiauto, +accuracy
+    Rapidfire,    // - cooldown - damage
+    SprayNPray,   // - cooldown - accuracy
+    Hungry,       // - ammo - cooldown
+    DoubleBurst,  // burst 2 - burst cooldown
+    HeavyBurst,   // + burst size - burst cooldown
+
+    Shotgun,      // 5 shot - damage
+    Sawnoff,      // + quanity + spread + randomspread
+    
+    TripleShot,   // triple shot - ammo
+
+    Marksman,     // + speed + damage + cooldown + accuracy
+}
+
+fn trait_ok(gt: GunTrait, other_traits: &Vec<GunTrait>) -> bool {
+    if gt == GunTrait::HeavyBurst {
+        return other_traits.contains(&GunTrait::DoubleBurst)
+    }
+    if gt == GunTrait::Sawnoff {
+        return other_traits.contains(&GunTrait::Shotgun)
+    }
+    true
+}
+
+fn random_gun_trait() -> GunTrait {
+    match rand::thread_rng().gen_range(0..=9) {
+        0 => GunTrait::Manual,
+        1 => GunTrait::Rapidfire,
+        2 => GunTrait::SprayNPray,
+        3 => GunTrait::Hungry,
+        4 => GunTrait::DoubleBurst,
+        5 => GunTrait::HeavyBurst,
+        6 => GunTrait::Shotgun,
+        7 => GunTrait::Sawnoff,
+        8 => GunTrait::TripleShot,
+        9 => GunTrait::Marksman,
+        _ => panic!("unreachable"),
+    }
+}
+
+
+
 #[derive(Debug, Clone, Copy)]
 pub struct GunState {
     pub last_shot: f32,
@@ -25,7 +70,7 @@ impl GunState {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct Gun {
     pub damage: f32,
     pub cooldown: f32,
@@ -41,6 +86,8 @@ pub struct Gun {
     pub action: Action,
     
     pub state: GunState,
+
+    pub gun_traits: Vec<GunTrait>,
     
 }
 
@@ -52,6 +99,112 @@ pub enum Action {
 }
 
 impl Gun {
+    pub fn new_default() -> Gun {
+        Gun {
+            damage: 1.0,
+            cooldown: 0.7,
+            bullet_speed: 1.0,
+            random_spread: 0.05,
+            max_ammo: 50,
+            
+            bullets_per_shot: 1,
+            spread: 0.5,
+            action: Action::Auto,
+            state: GunState::new(30),
+            gun_traits: Vec::new(),
+        }
+    }
+
+    pub fn apply_trait(&mut self, gun_trait: GunTrait) {
+        self.gun_traits.push(gun_trait);
+        match gun_trait {
+            GunTrait::Manual => {
+                self.action = Action::Semi;
+                self.random_spread *= 0.8;
+                self.cooldown *= 1.1;
+            },
+            GunTrait::Rapidfire => {
+                self.cooldown *= 0.4;
+                self.damage *= 0.7;
+                self.max_ammo *= 2;
+                self.state.ammo *= 2;
+            },
+            GunTrait::Shotgun => {
+                self.damage *= 0.7;
+                self.bullets_per_shot += 4;
+                self.spread *= 1.5;
+                self.random_spread *= 2.0;
+            },
+            GunTrait::SprayNPray => {
+                self.cooldown *= 0.5;
+                self.random_spread *= 2.0;
+            },
+            GunTrait::Hungry => {
+                self.state.ammo /= 2;
+                self.max_ammo /= 2;
+                self.cooldown *= 0.8;
+                self.damage *= 1.5;
+            },
+            GunTrait::DoubleBurst => {
+                self.action = Action::Burst(3, self.cooldown);
+                self.cooldown *= 0.1;
+                self.damage *= 0.7;
+            },
+            GunTrait::HeavyBurst => {
+                match self.action {
+                    Action::Burst(amount, cooldown) => {
+                        self.action = Action::Burst(amount * 2, cooldown * 2.0);
+                    }
+                    _ => {panic!("unreachable")},
+                };
+            },
+            GunTrait::TripleShot => {
+                self.bullets_per_shot += 2;
+                self.state.ammo /= 2;
+                self.max_ammo /= 2;
+            },
+            GunTrait::Sawnoff => {
+                self.random_spread *= 2.0;
+                self.bullets_per_shot += 2;
+                self.spread *= 2.0;
+            },
+            GunTrait::Marksman => {
+                self.damage *= 1.5;
+                self.cooldown *= 1.5;
+                self.bullet_speed *= 2.0;
+                self.random_spread *= 0.5;
+            },
+        }
+    }
+
+    // lol and you could generate a fucked one in a range by generating 2 and picking furthest from the mean
+    // make more interesting
+    pub fn new_random() -> Gun {
+        let mut rng = thread_rng();
+        let ammo = rng.gen_range(10..200);
+        let cooldown = rng.gen_range(0.01..2.0);
+        Gun {
+            damage: rng.gen_range(0.1..2.0),
+            cooldown: cooldown,
+            bullet_speed: rng.gen_range(0.5..2.0),
+            random_spread: rng.gen_range(0.0..1.0),
+            max_ammo: ammo,
+            bullets_per_shot: rng.gen_range(1..10),
+            spread: rng.gen_range(0.0..2.0), 
+            action: match rng.gen_range(0..=2) {
+                0 => Action::Semi,
+                1 => Action::Auto,
+                2 => Action::Burst(
+                    rng.gen_range(2..10),
+                    rng.gen_range(cooldown..5.0),
+                ),
+                _ => Action::Semi,
+            },
+            state: GunState::new(ammo),
+            gun_traits: Vec::new(),
+        }
+    }
+
     pub fn new(damage: f32, cooldown: f32, bullet_speed: f32, random_spread: f32, ammo: i32) -> Gun {
         Gun {
             damage,
@@ -65,6 +218,7 @@ impl Gun {
             action: Action::Auto,
 
             state: GunState::new(ammo),
+            gun_traits: Vec::new(),
         }
     }
     pub fn with_multishot(mut self, count: i32, arc: f32) -> Gun {
@@ -85,16 +239,21 @@ impl Gun {
     pub fn new_machinegun() -> Gun {
         Gun::new(1.0, 0.05, 1.5, 0.01, 100)
             .with_multishot(3, 0.5)
-        }
-        pub fn new_burstrifle() -> Gun {
-            Gun::new(1.0, 0.02, 1.5, 0.01, 100)
-            .with_burst(3, 0.33)
-        }
-        
-        pub fn new_shotgun() -> Gun {
-            Gun::new(1.0, 0.7, 1.3, 0.1, 15)
-            .with_multishot(5, 0.5)
-            .with_semi_auto()
+    }
+    pub fn new_burstrifle() -> Gun {
+        Gun::new(1.0, 0.02, 1.5, 0.01, 100)
+        .with_burst(3, 0.33)
+    }
+    
+    pub fn new_shotgun() -> Gun {
+        Gun::new(1.0, 0.7, 1.3, 0.1, 15)
+        .with_multishot(5, 0.5)
+        .with_semi_auto()
+    }
+
+    pub fn new_minigun() -> Gun {
+        Gun::new(0.2, 0.01, 1.5, 0.07, 500)
+        //.with_burst(40, 2.0)
     }
 
     pub fn on_cooldown(&self, t: f32) -> bool {
@@ -187,4 +346,26 @@ impl Gun {
                             .with_damage(self.damage));
         }
     }
+}
+
+pub fn generate_gun(num_traits: i32) -> Gun {
+    let mut traits = Vec::new();
+
+    for i in 0..num_traits {
+        loop {
+            let gt = random_gun_trait();
+            if trait_ok(gt, &traits) {
+                traits.push(gt);
+                break;
+            }
+        }
+    }
+    traits.sort();
+
+    let mut g = Gun::new_default();
+    for gt in traits {
+        g.apply_trait(gt);
+    }
+
+    return g;
 }

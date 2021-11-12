@@ -58,7 +58,7 @@ struct Walker {
 }
 
 impl Level {
-    pub fn new() -> Level {
+    pub fn new(mut player: Entity) -> Level {
         let params = LevelGenParams::new_rand();
         println!("Level gen params: {:?}", params);
 
@@ -129,7 +129,10 @@ impl Level {
         let player_pos_x = player_pos.0 as f32 * level.grid_size + level.grid_size as f32/2.0;
         let player_pos_y = player_pos.1 as f32 * level.grid_size + level.grid_size as f32/2.0;
 
-        level.entities.insert(0, Entity::new(EntityKind::Player, Vec2::new(player_pos_x, player_pos_y)));
+        player.aabb.x = player_pos_x - player.aabb.w/2.0;
+        player.aabb.y = player_pos_y - player.aabb.h/2.0;
+
+        level.entities.insert(0, player);
 
         walker_positions.retain(|pos| *pos != player_pos);
 

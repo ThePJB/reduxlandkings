@@ -25,7 +25,7 @@ pub enum EntityCommand {
     Unshoot(u32),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Entity {
     pub kind: EntityKind,
     pub aabb: Rect,
@@ -70,7 +70,7 @@ impl Entity {
                     .with_burst(4, 4.0)
                     .with_multishot(5, 0.5)
             }
-            EntityKind::GunPickup => {Gun::new_machinegun()}
+            EntityKind::GunPickup => {generate_gun(3)}
             _ => {Gun::new(1.0, 1.0, 1.0, 1.0, 1)}
         };
         let speed = match kind {

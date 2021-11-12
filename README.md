@@ -157,3 +157,63 @@ could add underhang for graphics, whatever
 
 mad lookin fresh af
 might do gun stack modus next
+
+-----
+
+ok what next, procedural gun generation?
+
+im kinda scared it will be shit
+
+could do it within parameters like with rejection sampling
+
+-----
+
+ok make player character persist
+
+with guns, pure random, its shit lol no control
+
+maybe make a enumed 'blueprint' thing of traits
+e.g.:
+ - spray n pray
+ - hungry
+ - shotgun
+ - sniper
+ - windup
+
+they can be disjoined eg spray n pray vs sniper
+
+reload: movt penalty on burst cooldown
+heavy: mvot penalty on shoot
+
+burst make look follow cursor
+
+maybe a GunTrait basically mutates a gun to  have certain things
+
+so like accurate, inaccurate, shoop da woop, spray n pray, etc
+and thats how combining would work, its like a gun genome
+even let it 2x the traits lol. spray n pray squared
+they could have an order of application. so could be multiplicative, additive, etc
+could have a score as well
+
+other considerations:
+ - dependencies
+ - allow multiples? could do a different thing depending on if its there already
+
+hmmm base types could simplify it, but how would you fuse them then
+
+
+
+-----------
+
+1. make player persist
+2. try out gun procgen then
+
+bullet size and basically kinetics could be good to play with
+
+ammo lines
+
+lol xbow, bow and arrow
+
+energy weapons with charge up time, alt fire, overheating
+lol beam weapons with raycast
+bouncy beam that can also kill you? sounds pretty OP

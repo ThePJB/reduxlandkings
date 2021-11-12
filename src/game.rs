@@ -73,7 +73,7 @@ impl Game {
     pub fn new(aspect_ratio: f32) -> Game {
 
         let mut game = Game {
-            level: Level::new(),
+            level: Level::new(Entity::new(EntityKind::Player, Vec2::new(0.0, 0.0))),
             look: Vec2::new(0.0, 0.0),
             player_id: 0,
             collisions: Vec::new(),
@@ -83,8 +83,9 @@ impl Game {
             player_gun_fifo: VecDeque::new(),
         };
 
-        game.player_gun_fifo.push_back(Gun::new_machinegun());
-        game.player_gun_fifo.push_back(Gun::new_shotgun());
+        game.player_gun_fifo.push_back(generate_gun(3));
+        game.player_gun_fifo.push_back(generate_gun(3));
+        game.player_gun_fifo.push_back(generate_gun(3));
         
         game
     }
@@ -162,7 +163,7 @@ impl Game {
                     CollisionObject::Entity(id) => {
                         if let Some(entity) = self.level.entities.get(&id) {
                             if entity.kind == EntityKind::GunPickup {
-                                Some(entity.gun)
+                                Some(entity.gun.clone())
                             } else {
                                 None
                             }
@@ -196,7 +197,7 @@ impl Game {
         self.level.entities.retain(|_, ent| ent.health > 0.0);
 
         for col in self.collisions.iter().filter(|col| col.subject == self.player_id) {
-            println!("Player collision: {:?} {:?}", col.object, col.penetration);
+            //println!("Player collision: {:?} {:?}", col.object, col.penetration);
         }
 
         apply_movement(&mut self.level.entities, &self.collisions, dt);
@@ -207,7 +208,9 @@ impl Game {
 
         if remaining_enemies == 0 {
             println!("you win!");
-            self.level = Level::new();
+            if let Some(player) = self.level.entities.get(&self.player_id) {
+                self.level = Level::new(player.clone());
+            }
         }
     }
 
@@ -387,13 +390,18 @@ impl Game {
                 self.level.apply_command(EntityCommand::Move(self.player_id, dir));
             },
             InputCommand::Reset => {
-                self.level = Level::new();
+                if let Some(player) = self.level.entities.get(&self.player_id) {
+                    self.level = Level::new(player.clone());
+                } else {
+                    self.level = Level::new(Entity::new(EntityKind::Player, Vec2::new(0.0, 0.0)));
+                }
             },
             InputCommand::EatGun => {
                 if let Some(player) = self.level.entities.get_mut(&self.player_id) {
                     if let Some(next_gun) = self.player_gun_fifo.pop_front() {
                         player.gun = next_gun;
                         player.health += 1.0;
+                        println!("New gun: {:?}", player.gun.gun_traits);
                         if player.health > player.max_health {
                             player.health = player.max_health;
                         }
