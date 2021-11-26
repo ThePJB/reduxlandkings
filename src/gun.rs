@@ -1,6 +1,7 @@
 use crate::kmath::*;
 use rand::prelude::*;
 use crate::entity::*;
+use crate::rect::*;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug)]
 pub enum GunTrait {
@@ -76,6 +77,7 @@ pub struct Gun {
     pub cooldown: f32,
     pub bullet_speed: f32,
     pub random_spread: f32,
+    pub bullet_size: f32,
     
     pub bullets_per_shot: i32,
 
@@ -106,6 +108,7 @@ impl Gun {
             bullet_speed: 1.0,
             random_spread: 0.05,
             max_ammo: 50,
+            bullet_size: 0.02,
             
             bullets_per_shot: 1,
             spread: 0.5,
@@ -177,34 +180,6 @@ impl Gun {
         }
     }
 
-    // lol and you could generate a fucked one in a range by generating 2 and picking furthest from the mean
-    // make more interesting
-    pub fn new_random() -> Gun {
-        let mut rng = thread_rng();
-        let ammo = rng.gen_range(10..200);
-        let cooldown = rng.gen_range(0.01..2.0);
-        Gun {
-            damage: rng.gen_range(0.1..2.0),
-            cooldown: cooldown,
-            bullet_speed: rng.gen_range(0.5..2.0),
-            random_spread: rng.gen_range(0.0..1.0),
-            max_ammo: ammo,
-            bullets_per_shot: rng.gen_range(1..10),
-            spread: rng.gen_range(0.0..2.0), 
-            action: match rng.gen_range(0..=2) {
-                0 => Action::Semi,
-                1 => Action::Auto,
-                2 => Action::Burst(
-                    rng.gen_range(2..10),
-                    rng.gen_range(cooldown..5.0),
-                ),
-                _ => Action::Semi,
-            },
-            state: GunState::new(ammo),
-            gun_traits: Vec::new(),
-        }
-    }
-
     pub fn new(damage: f32, cooldown: f32, bullet_speed: f32, random_spread: f32, ammo: i32) -> Gun {
         Gun {
             damage,
@@ -212,6 +187,7 @@ impl Gun {
             bullet_speed,
             random_spread,
             max_ammo: ammo,
+            bullet_size: 0.02,
             
             bullets_per_shot: 1,
             spread: 0.0,
@@ -338,6 +314,21 @@ impl Gun {
             let spread_dir = dir.rotate(spread_float);
 
             let adjusted_dir = spread_dir.spread(self.random_spread);
+
+            bullets.push(Entity {
+                kind: EntityKind::Bullet,
+                aabb: Rect::new_centered(pos.x, pos.y, self.bullet_size, self.bullet_size),
+                velocity: adjusted_dir * self.bullet_speed,
+                owner: owner_id,
+                team: owner_team,
+                damage: self.damage,
+                gun: Gun::new_default(),
+                want_shoot: false,
+                health: 1.0,
+                max_health: 1.0,
+                previous_shoot_dir: Vec2::new(0.0, 0.0),
+                speed: 0.0,
+            });
 
             bullets.push(Entity::new(EntityKind::Bullet, pos)
                             .with_velocity(adjusted_dir * self.bullet_speed)

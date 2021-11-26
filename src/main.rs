@@ -241,23 +241,3 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     }
 }
-
-fn renderer_test(renderer: &mut Renderer) {
-    renderer.top_left = Vec2::new(1.0, 1.0);
-    renderer.bot_right = Vec2::new(3.0, 3.0);
-
-    renderer.draw_rect(Rect::new(2.0, 2.0, 1.0, 1.0), Vec3::new(1.0, 0.0, 0.0), 0.0);
-
-    // top left blue
-    renderer.draw_rect(Rect::new(1.0, 1.0, 0.1, 0.1), Vec3::new(0.0, 0.0, 1.0), 0.0);
-
-    // bot right magenta
-    renderer.draw_rect(Rect::new(2.9, 2.9, 0.1, 0.1), Vec3::new(1.0, 0.0, 1.0), 0.0);
-
-    // bot left green
-    renderer.draw_rect(Rect::new(1.0, 2.9, 0.1, 0.1), Vec3::new(0.0, 1.0, 0.0), 0.0);
-
-    // top right cyan
-    renderer.draw_rect(Rect::new(2.9, 1.0, 0.1, 0.1), Vec3::new(0.0, 1.0, 1.0), 0.0);
-
-}

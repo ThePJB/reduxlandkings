@@ -217,3 +217,6 @@ lol xbow, bow and arrow
 energy weapons with charge up time, alt fire, overheating
 lol beam weapons with raycast
 bouncy beam that can also kill you? sounds pretty OP
+could have hazards like holes and stuff. can imagine populating them with a ca
+
+bouncer

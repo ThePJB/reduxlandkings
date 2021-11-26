@@ -1,5 +1,4 @@
 use crate::kmath::*;
-use std::f32::INFINITY;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Rect {

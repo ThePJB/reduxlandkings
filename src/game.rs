@@ -231,8 +231,6 @@ impl Game {
         let wall_front_amount = 0.5;    // to fix jank corner case will need to be the same as overhang, will look ok once characters are taller or tiles are smaller
 
 
-
-
         {   // Level
             let scale = 1.2;
             let look_strength = 0.2;
@@ -267,7 +265,7 @@ impl Game {
                         renderer.draw_rect(tile_rect.child(0.0, 0.0, 1.0, underhang_amount), edge_colour, wall_underhang_height);
                     }
                     if tile.edge {
-                        renderer.draw_rect(tile_rect.child(0.0, 0.5, 1.0, 0.5), edge_colour, wall_front_height);
+                        renderer.draw_rect(tile_rect.child(0.0, 1.0 - wall_front_amount, 1.0, wall_front_amount), edge_colour, wall_front_height);
                     }
                 }
             }
