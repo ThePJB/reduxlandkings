@@ -6,6 +6,7 @@ mod level;
 mod collision_system;
 mod gun;
 mod kmath;
+mod map_gen;
 
 use glow::*;
 use std::error::Error;
@@ -147,7 +148,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         
                         window.swap_buffers().unwrap();
 
-
+                        /*
                         let loop_end = SystemTime::now();
                         let delta = loop_end.duration_since(loop_start).unwrap().as_secs_f64();
                         let frame_cap = 1.0 / 60.0;
@@ -158,6 +159,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         } else {
                             dt = delta;
                         }
+                        */
                     }
 
 

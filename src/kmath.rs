@@ -74,3 +74,14 @@ impl std::ops::Neg for Vec2 {
         self.mul_scalar(-1.0)
     }
 }
+
+pub fn khash(mut state: u32) -> u32 {
+    state = (state ^ 2747636419) * 2654435769;
+    state = (state ^ (state >> 16)) * 2654435769;
+    state = (state ^ (state >> 16)) * 2654435769;
+    state
+}
+
+pub fn krand(seed: u32) -> f32 {
+    khash(seed) as f32 / 4294967295.0
+}

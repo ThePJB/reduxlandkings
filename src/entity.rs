@@ -59,14 +59,14 @@ impl Entity {
         let gun = match kind {
             EntityKind::Player => {Gun::new_burstrifle()},
             EntityKind::WalkerShooter => {
-                Gun::new(0.5, 1.1, 0.5, 0.05, 9999999)
+                Gun::new(0.5, 1.1, 0.6, 0.05, 9999999)
             }
             EntityKind::RunnerGunner => {
-                Gun::new(0.5, 0.05, 0.45, 0.2, 9999999)
+                Gun::new(0.5, 0.05, 0.6, 0.2, 9999999)
                     .with_burst(5, 1.5)
             }
             EntityKind::Chungus => {
-                Gun::new(0.5, 0.1, 0.35, 0.3, 9999999)
+                Gun::new(0.5, 0.1, 0.5, 0.3, 9999999)
                     .with_burst(4, 4.0)
                     .with_multishot(5, 0.5)
             }
@@ -74,7 +74,7 @@ impl Entity {
             _ => {Gun::new(1.0, 1.0, 1.0, 1.0, 1)}
         };
         let speed = match kind {
-            EntityKind::Player => 0.6,
+            EntityKind::Player => 0.7,
             EntityKind::WalkerShooter => 0.2,
             EntityKind::RunnerGunner => 0.3,
             EntityKind::Chungus => 0.15,

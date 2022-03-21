@@ -4,6 +4,7 @@ use crate::entity::*;
 use crate::rect::*;
 use rand::prelude::*;
 use crate::kmath::*;
+use crate::map_gen::*;
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub struct Tile {
@@ -175,6 +176,84 @@ impl Level {
         level
     }
 
+    pub fn new_dla(mut player: Entity, seed: u32) -> Level {
+        let w = 30;
+        let h = 30;
+
+        // let basic_level = gen_dla(w, h, 600, seed);
+        let basic_level = gen_ca(w, h, 0.6, 10, seed);
+
+
+        let mut level = Level {
+            entities: HashMap::new(),
+            tiles: basic_level.iter().map(|b| Tile {walkable: *b, overhang: false, underhang: false, edge: false}).collect(),
+            side_length: w as usize,
+            grid_size: 0.2,
+            floor_colour: Vec3::new(0.75, 0.75, 0.5),
+            wall_colour: Vec3::new(0.2, 0.2, 0.4),
+
+        };
+
+        // place player
+        let player_pos = (w as u32/2, h as u32/2);
+
+        // let player_pos = *walker_positions.iter().max_by_key(|(x, y)| {
+        //     let xp = x - params.side_length/2;
+        //     let yp = y - params.side_length/2;
+        //     xp*xp+yp*yp
+        // }).unwrap();
+        
+        let player_pos_x = player_pos.0 as f32 * level.grid_size + level.grid_size as f32/2.0;
+        let player_pos_y = player_pos.1 as f32 * level.grid_size + level.grid_size as f32/2.0;
+
+        player.aabb.x = player_pos_x - player.aabb.w/2.0;
+        player.aabb.y = player_pos_y - player.aabb.h/2.0;
+
+        level.entities.insert(0, player);
+
+        // CA pass
+        for i in 0..level.side_length as i32 {
+            for j in 0..level.side_length as i32 {
+                let maybe_tile_below = level.get_tile(i, j+1);
+                let maybe_tile_above = level.get_tile(i, j-1);
+                let mut this_tile = level.get_tile_mut(i, j).unwrap();
+
+                if this_tile.walkable {
+                    match maybe_tile_above {
+                        Some(above) if !above.walkable => {this_tile.underhang = true},
+                        _ => {},
+                    }
+                    match maybe_tile_below {
+                        Some(below) if !below.walkable => {this_tile.overhang = true},
+                        _ => {},
+                    }
+                } else {
+                    match maybe_tile_below {
+                        Some(below) if below.walkable => {this_tile.edge = true},
+                        _ => {},
+                    }
+                }
+            }
+        }
+
+        for i in 0..w {
+            for j in 0..h {
+                if basic_level[i*h + j] {
+                    let s = seed * 213414 + i as u32 * 4123523 + j as u32 * 31234;
+                    if krand(s) < 0.08 {
+                        let px = i as f32 * level.grid_size + level.grid_size as f32/2.0;
+                        let py = j as f32 * level.grid_size + level.grid_size as f32/2.0;
+                        let entity_kinds = vec!(EntityKind::WalkerShooter, EntityKind::RunnerGunner, EntityKind::Chungus, EntityKind::GunPickup);
+                        let e = Entity::new(entity_kinds[khash(s + 2) as usize % entity_kinds.len()], Vec2::new(px, py));
+                        level.entities.insert(khash(s + 1), e);
+                    }
+                }
+            }
+        }
+
+        level
+    }
+
     pub fn get_tile(&self, i: i32, j: i32) -> Option<Tile> {
         if i >= 0 && i < self.side_length as i32 && j >= 0 && j < self.side_length as i32 {
             Some(self.tiles[i as usize*self.side_length + j as usize])
@@ -304,6 +383,7 @@ impl Level {
         }
     }
 }
+
 /*
 #[test]
 pub fn test_raycast() {

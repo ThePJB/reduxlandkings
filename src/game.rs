@@ -23,6 +23,7 @@ pub enum InputCommand {
 }
 
 pub struct Game {
+    seed: u32,
     t: f32,
     pub player_pos: Vec2,   // camera focus
     look: Vec2,             // screen space
@@ -73,7 +74,9 @@ impl Game {
     pub fn new(aspect_ratio: f32) -> Game {
 
         let mut game = Game {
-            level: Level::new(Entity::new(EntityKind::Player, Vec2::new(0.0, 0.0))),
+            seed: 0,
+            // level: Level::new(Entity::new(EntityKind::Player, Vec2::new(0.0, 0.0))),
+            level: Level::new_dla(Entity::new(EntityKind::Player, Vec2::new(0.0, 0.0)), 0),
             look: Vec2::new(0.0, 0.0),
             player_id: 0,
             collisions: Vec::new(),
@@ -207,10 +210,10 @@ impl Game {
         //println!("Remaining enemies: {}", remaining_enemies);
 
         if remaining_enemies == 0 {
-            println!("you win!");
-            if let Some(player) = self.level.entities.get(&self.player_id) {
-                self.level = Level::new(player.clone());
-            }
+            // println!("you win!");
+            // if let Some(player) = self.level.entities.get(&self.player_id) {
+            //     self.level = Level::new_dla(player.clone());
+            // }
         }
     }
 
@@ -370,6 +373,16 @@ impl Game {
         }
     }
 
+    pub fn reset_level(&mut self) {
+        self.seed += 1;
+        let player = if let Some(player) = self.level.entities.get(&self.player_id) {
+            player.clone()
+        } else {
+            Entity::new(EntityKind::Player, Vec2::new(0.0, 0.0))
+        };
+        self.level = Level::new_dla(player, self.seed);
+    }
+
     pub fn apply_command(&mut self, cmd: InputCommand) {
         match cmd {
             InputCommand::Look(p) => {
@@ -388,11 +401,7 @@ impl Game {
                 self.level.apply_command(EntityCommand::Move(self.player_id, dir));
             },
             InputCommand::Reset => {
-                if let Some(player) = self.level.entities.get(&self.player_id) {
-                    self.level = Level::new(player.clone());
-                } else {
-                    self.level = Level::new(Entity::new(EntityKind::Player, Vec2::new(0.0, 0.0)));
-                }
+                self.reset_level();
             },
             InputCommand::EatGun => {
                 if let Some(player) = self.level.entities.get_mut(&self.player_id) {
