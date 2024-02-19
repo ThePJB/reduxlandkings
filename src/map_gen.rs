@@ -1,4 +1,7 @@
-use crate::kmath::*;
+use crate::{kmath::*, map_fragment::MapFragment};
+
+
+
 
 pub fn gen_dla(w: usize, h: usize, n: u32, mut seed: u32) -> Vec<bool> {
     let mut level = vec![false; w*h];
@@ -108,4 +111,50 @@ pub fn gen_ca(w: usize, h: usize, density: f32, iters: u32, seed: u32) -> Vec<bo
     }
 
     level
+}
+
+pub fn gen_ca2(w: i32, h: i32, seed: u32) -> ((i32, i32), MapFragment) {
+    let mut ca = MapFragment::new(w,h).scramble(0.55, seed).ca(10, seed+1);
+    
+    let mut ppseed = seed + 12534129;
+    let center = loop {
+        let rx = (khash(ppseed) % 10) as i32 - 5;
+        let ry = (khash(ppseed + 1) % 10) as i32 - 5;
+
+        let pp = (w/2 + rx, h/2 + ry);
+
+        if ca.get(pp.0, pp.1) {
+            break pp;
+        }
+
+        ppseed += 2;
+    };
+
+    let paths1 = ca.paths_from(center.0, center.1);
+    let player_spawn = paths1.furthest();
+
+    let paths2 = ca.paths_from(player_spawn.0, player_spawn.1);
+    let end = paths2.furthest();
+
+    let hot_path = paths2.path(player_spawn.0, player_spawn.1, end.0, end.1);
+    let mut mf_save = MapFragment::new(w,h);
+    for tile in hot_path.iter() {
+        let paths = ca.paths_from(tile.0, tile.1);
+        let ok_tiles = paths.tiles_within_dist(7.0);
+        for ok_tile in ok_tiles {
+            mf_save.set(ok_tile.0, ok_tile.1, true);
+        }
+    }
+
+    ca.and_equals(&mf_save, 0, 0);
+
+    for i in 0..ca.w {
+        for j in 0..ca.h {
+            if !paths1.reachable(i, j) {
+                ca.set(i, j, false);
+            }
+        }
+    }
+
+    (player_spawn, ca)
 }

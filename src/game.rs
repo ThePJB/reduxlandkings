@@ -64,7 +64,7 @@ fn draw_gun_icon(renderer: &mut Renderer, r: Rect, height: f32) {
 
 impl Game {
     // screen is 0..aspect ratio in x and 0..1 in y
-    // ok well at least this works, fucking matrices
+    // ok well at least this works, fliping matrices
     pub fn screen_to_world(&self, p: Vec2) -> Vec2 {
         let screen_max = Vec2::new(self.aspect_ratio, 1.0);
         let look_weight = 0.2;

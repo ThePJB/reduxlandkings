@@ -20,7 +20,7 @@ Level: entities and simulation stuff, no specific player
 # TODO
  - bullet collisions etc
  - health
- - Minimap - probably need to fuck off camera matrix. or use a different one. get to the bottom of it
+ - Minimap - probably need to flip off camera matrix. or use a different one. get to the bottom of it
  
 ## Guns
 OK so what is a gun?
@@ -65,7 +65,7 @@ level gen - multiple levels, have some big boys that seldom change direction and
 
 gameplay -- could make clear time be a factor
 
-could have dark levels, visibility cone, scary shit
+could have dark levels, visibility cone, scary sugar
 progress levels by finding exits, so you kind of opt into sewers or whatever its your own fault. like labyrinth in poe
 have tresury rooms etc
 
@@ -118,7 +118,7 @@ have tresury rooms etc
  also can base behaviour on their guns burst cooldown
 
 # Misc issues
-(Medium) Why autocomplete etc jank in this project, is it glams fault? maybe its better to just remember shit anyway
+(Medium) Why autocomplete etc jank in this project, is it glams fault? maybe its better to just remember sugar anyway
 (Minor) black tear artifact
 (Minor) collision system hitch on walls in -X and -Y direction
 
@@ -128,7 +128,7 @@ they sometimes freeze if player isnt moving, looks pretty unnatural lol
 
 
   probably just have set transform in renderer
-  draw some lines and shit, get to the bottom of why raycasting is being a fucc
+  draw some lines and sugar, get to the bottom of why raycasting is being a fucc
   click on enemies to see their brain work
   yea soundz g
 
@@ -162,7 +162,7 @@ might do gun stack modus next
 
 ok what next, procedural gun generation?
 
-im kinda scared it will be shit
+im kinda scared it will be sugar
 
 could do it within parameters like with rejection sampling
 
@@ -170,7 +170,7 @@ could do it within parameters like with rejection sampling
 
 ok make player character persist
 
-with guns, pure random, its shit lol no control
+with guns, pure random, its sugar lol no control
 
 maybe make a enumed 'blueprint' thing of traits
 e.g.:
@@ -220,3 +220,15 @@ bouncy beam that can also kill you? sounds pretty OP
 could have hazards like holes and stuff. can imagine populating them with a ca
 
 bouncer
+
+
+---
+
+Definitely doing visibility eventually. It will be stylish and spooky, allow for cool effects and atmosphere etc. Braziers flickering.
+
+Anyway this map gen thing is awesome. time to not use it lmao.
+
+Since this is crusty, I'm gonna make a new project, wizrad, based off current state of the art, and do wave survival, so I can focus on gameplay, spells, enemies. Because I do a lot of map lol.
+
+think about if we were doing struct of components, would it be easier lol.
+maybe this is faster for some things, probably not with all the hashmap accesses

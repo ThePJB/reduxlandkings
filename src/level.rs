@@ -5,6 +5,7 @@ use crate::rect::*;
 use rand::prelude::*;
 use crate::kmath::*;
 use crate::map_gen::*;
+use crate::map_fragment::*;
 
 #[derive(PartialEq, Eq, Copy, Clone, Debug)]
 pub struct Tile {
@@ -177,16 +178,58 @@ impl Level {
     }
 
     pub fn new_dla(mut player: Entity, seed: u32) -> Level {
+
+        let w = 30;
+        let h = 30;
+        let (player_pos, basic_level) = gen_ca2(w, h, seed);
+        /*
         let w = 30;
         let h = 30;
 
         // let basic_level = gen_dla(w, h, 600, seed);
-        let basic_level = gen_ca(w, h, 0.6, 10, seed);
+        // let basic_level = gen_ca(w, h, 0.6, 10, seed);
+        // let mut basic_level = MapFragment::new(w,h).dla(1000, seed);
+        let dla = MapFragment::new(w,h).dla(1000,seed+2);
+        let ca = MapFragment::new(w,h).scramble(0.55, seed).ca(10, seed+1);
+        // let mut basic_level = dla.and_equals(&ca, 0, 0);
+        let mut conv = dla.conv(&MapFragment::new_open(2,2));
+        conv.and_equals(&ca, 0, 0);
+        // let mut basic_level = ca.conv(&MapFragment::new_open(2,2)).and_equals(&dla, 0, 0);
+        // well these ops are linear so
 
+        let mut basic_level = MapFragment::new(w,h).dla(1000,seed+6);
+        let ca2 = MapFragment::new(w,h).scramble(0.55, seed + 4).ca(10, seed+8);
+
+        basic_level.blit(&ca2, w/3, 0);
+        basic_level.blit(&conv, 2* w / 3, 0);
+
+        let mut ppseed = seed + 12534129;
+        let player_pos = loop {
+            let rx = (khash(ppseed) % 10) as i32 - 5;
+            let ry = (khash(ppseed + 1) % 10) as i32 - 5;
+
+            let pp = (w/2 + rx, h/2 + ry);
+
+            if basic_level.get(pp.0, pp.1) {
+                break pp;
+            }
+
+            ppseed += 2;
+        };
+
+        let paths = basic_level.paths_from(player_pos.0, player_pos.1);
+        for i in 0..basic_level.w {
+            for j in 0..basic_level.h {
+                if !paths.reachable(i, j) {
+                    basic_level.set(i, j, false);
+                }
+            }
+        }
+        */
 
         let mut level = Level {
             entities: HashMap::new(),
-            tiles: basic_level.iter().map(|b| Tile {walkable: *b, overhang: false, underhang: false, edge: false}).collect(),
+            tiles: basic_level.walkable.iter().map(|b| Tile {walkable: *b, overhang: false, underhang: false, edge: false}).collect(),
             side_length: w as usize,
             grid_size: 0.2,
             floor_colour: Vec3::new(0.75, 0.75, 0.5),
@@ -195,7 +238,6 @@ impl Level {
         };
 
         // place player
-        let player_pos = (w as u32/2, h as u32/2);
 
         // let player_pos = *walker_positions.iter().max_by_key(|(x, y)| {
         //     let xp = x - params.side_length/2;
@@ -238,7 +280,7 @@ impl Level {
 
         for i in 0..w {
             for j in 0..h {
-                if basic_level[i*h + j] {
+                if basic_level.get(i as i32, j as i32) {
                     let s = seed * 213414 + i as u32 * 4123523 + j as u32 * 31234;
                     if krand(s) < 0.08 {
                         let px = i as f32 * level.grid_size + level.grid_size as f32/2.0;
@@ -312,6 +354,7 @@ impl Level {
         let mut grid_x = (ray_origin.x / self.grid_size) as i32;
         let mut grid_y = (ray_origin.y / self.grid_size) as i32;
 
+
         let grid_dest_x = (ray_destination.x / self.grid_size) as i32;
         let grid_dest_y = (ray_destination.y / self.grid_size) as i32;
 
@@ -338,7 +381,12 @@ impl Level {
                 return None; 
             }
             n += 1;
-            // might be a bit inefficient, checking same thing repeatedly, dont care its more readable rn
+
+            // check to terminate (left map)
+            if grid_x < 0 || grid_x >= self.side_length as i32 - 1 || grid_y < 0 || grid_y >= self.side_length as i32 - 1 {
+                return Some(Vec2::new(actual_march_x, actual_march_y));
+            }
+            
             // check to terminate (wall strike)
             if !self.tiles[(grid_x*self.side_length as i32 + grid_y) as usize].walkable {
                 return Some(Vec2::new(actual_march_x, actual_march_y));

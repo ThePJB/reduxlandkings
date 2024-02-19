@@ -2,11 +2,14 @@ mod renderer;
 mod game;
 mod rect;
 mod entity;
-mod level;
 mod collision_system;
 mod gun;
 mod kmath;
 mod map_gen;
+mod map_fragment;
+mod priority_queue;
+
+mod level;
 
 use glow::*;
 use std::error::Error;
@@ -26,6 +29,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut window_y = 1200.0;
 
     let projection_mat = Mat4::orthographic_lh(0.0, 1.0, 1.0, 0.0, 1000.0, 0.0);
+    println!("{}", projection_mat);
     let projection_inverse = projection_mat.inverse();
 
 
